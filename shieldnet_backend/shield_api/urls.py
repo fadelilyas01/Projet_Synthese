@@ -1,3 +1,4 @@
+from django.urls import register_converter
 from django.urls import path
 from .views import (
     BloomFilterDownloadView,
@@ -18,6 +19,7 @@ from .views import (
     AdminBlacklistDetailView,
     AdminUsersListView,
     AdminReportsListView,
+    AdminReportDetailView,
     AdminPurgeJunkView,
     SubmitSafeReportView,
     ConsensusStatusView,
@@ -30,6 +32,16 @@ from .views import (
     RegionalComplianceNormsView,
     RegionalComplianceRegionsView,
 )
+
+
+class HexHashConverter:
+    regex = r'[0-9a-fA-F]{64}'
+    def to_python(self, value):
+        return value.lower()
+    def to_url(self, value):
+        return value.lower()
+
+register_converter(HexHashConverter, 'hex_hash')
 
 urlpatterns = [
     path('metrics/', PrometheusMetricsView.as_view(), name='prometheus-metrics'),
@@ -44,8 +56,8 @@ urlpatterns = [
     path('reports/', SubmitReportView.as_view(), name='submit-report'),
     path('reports/safe/', SubmitSafeReportView.as_view(), name='submit-safe-report'),
     path('check/batch/', BatchCheckNumberView.as_view(), name='batch-check-number'),
-    path('check/<str:phone_hash>/', CheckNumberView.as_view(), name='check-number'),
-    path('consensus/<str:phone_hash>/', ConsensusStatusView.as_view(), name='consensus-status'),
+    path('check/<hex_hash:phone_hash>/', CheckNumberView.as_view(), name='check-number'),
+    path('consensus/<hex_hash:phone_hash>/', ConsensusStatusView.as_view(), name='consensus-status'),
     path('auth/register/', RegisterView.as_view(), name='auth-register'),
     path('auth/login/', EmailLoginView.as_view(), name='auth-login'),
     path('auth/google/', GoogleLoginView.as_view(), name='auth-google'),
@@ -57,7 +69,7 @@ urlpatterns = [
     path('admin/blacklist/<str:phone_hash>/', AdminBlacklistDetailView.as_view(), name='admin-blacklist-detail'),
     path('admin/users/', AdminUsersListView.as_view(), name='admin-users'),
     path('admin/reports/', AdminReportsListView.as_view(), name='admin-reports'),
-    path('admin/reports/<str:report_id>/', AdminReportsListView.as_view(), name='admin-reports-detail'),
+    path('admin/reports/<str:report_id>/', AdminReportDetailView.as_view(), name='admin-reports-detail'),
     path('admin/safe-reports/', AdminSafeReportsListView.as_view(), name='admin-safe-reports'),
     path('admin/consensus-audit/', AdminConsensusAuditView.as_view(), name='admin-consensus-audit'),
     path('admin/purge/', AdminPurgeJunkView.as_view(), name='admin-purge'),

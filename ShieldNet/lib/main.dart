@@ -28,7 +28,13 @@ void main() async {
   try {
     await dotenv.load(fileName: ".env");
   } catch (e) {
-    AppLogger.log("[Main] Fichier .env non présent ou illisible, configuration par défaut: $e");
+    AppLogger.log("[Main] AVERTISSEMENT : Fichier .env absent ou invalide ($e). Utilisation de la configuration de secours.");
+  }
+
+  // Validation des variables d'environnement critiques
+  final apiBaseUrl = dotenv.isInitialized ? dotenv.env['API_BASE_URL'] : null;
+  if (apiBaseUrl == null || apiBaseUrl.isEmpty) {
+    AppLogger.log("[Main] API_BASE_URL non définie dans .env. Repli sur la liste candidate par défaut.");
   }
 
   // Synchronisation sécurisée du sel cryptographique avec le Keystore Android
@@ -141,97 +147,6 @@ class ShieldNetApp extends ConsumerWidget {
           builder: (_) => const MainTabNavigationScreen(),
         );
       },
-    );
-  }
-}
-
-class InitialSplashScreen extends StatefulWidget {
-  const InitialSplashScreen({super.key});
-
-  @override
-  State<InitialSplashScreen> createState() => _InitialSplashScreenState();
-}
-
-class _InitialSplashScreenState extends State<InitialSplashScreen> {
-  @override
-  void initState() {
-    super.initState();
-    _checkOnboarding();
-  }
-
-  Future<void> _checkOnboarding() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      var hasSeen = prefs.getBool('has_seen_onboarding') ?? false;
-      if (!hasSeen) {
-        const storage = FlutterSecureStorage();
-        final secureVal = await storage.read(key: 'has_seen_onboarding');
-        hasSeen = (secureVal == 'true');
-      }
-
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (_) => hasSeen ? const MainTabNavigationScreen() : const OnboardingPage(),
-          ),
-        );
-      }
-    } catch (_) {
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const MainTabNavigationScreen()),
-        );
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Scaffold(
-      backgroundColor: isDark ? AppTheme.backgroundDark : AppTheme.backgroundLight,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: AppTheme.primaryColor.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.shield_outlined, size: 68, color: AppTheme.primaryColor),
-            ),
-            const SizedBox(height: 22),
-            Text(
-              'ShieldNet',
-              style: TextStyle(
-                color: isDark ? Colors.white : AppTheme.textPrimaryLight,
-                fontSize: 28,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.5,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              Localizations.maybeLocaleOf(context)?.languageCode == 'en'
-                  ? 'Telecom Security & Privacy'
-                  : 'Sécurité Télécom & Confidentialité',
-              style: TextStyle(
-                color: isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondaryLight,
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 36),
-            const SizedBox(
-              width: 22,
-              height: 22,
-              child: CircularProgressIndicator(strokeWidth: 2.5, color: AppTheme.primaryColor),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

@@ -30,6 +30,7 @@ L'interception utilise le service natif Android `CallScreeningService` codé en 
 ```
 
 ### Pourquoi une décision locale ?
+
 Android exige que le service de filtrage réponde en moins de quelques dizaines de millisecondes. Faire une requête réseau à chaque appel entrant serait trop lent et exposerait la vie privée de l'utilisateur. En stockant la liste des numéros signalés localement dans SQLite (mode *Write-Ahead Logging*), l'application peut décider en moins de 2 millisecondes sans dépendre d'une connexion internet active.
 
 ---
@@ -85,10 +86,16 @@ ShieldNet/
 ## 4. Démarrage et configuration
 
 ### Configuration (`.env`)
+
 À la racine du dossier `ShieldNet/`, configurez le fichier `.env` :
 
 ```env
-API_BASE_URL=http://10.0.2.2:8000/api/v1  # 10.0.2.2 pointe vers votre PC depuis l'émulateur Android
+# Mode 1 : Téléphone physique USB (avec adb reverse tcp:8000 tcp:8000) ou Desktop/Web
+API_BASE_URL=http://127.0.0.1:8000/api/v1
+
+# Mode 2 : Émulateur Android Studio
+# API_BASE_URL=http://10.0.2.2:8000/api/v1
+
 API_KEY=dev-local-api-key-test-do-not-use-in-prod
 HASH_SALT=dev-local-hash-salt-test-do-not-use-in-prod
 ```

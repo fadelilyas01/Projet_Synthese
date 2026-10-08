@@ -1117,3 +1117,32 @@ class RegionalComplianceRegionsView(APIView):
         from .services import RegionalComplianceService
         return Response(RegionalComplianceService.get_available_regions(), status=status.HTTP_200_OK)
 
+
+
+class AdminReportDetailView(APIView):
+    """
+    GET /api/v1/admin/reports/<report_id>/ : Détail d'un signalement spécifique.
+    DELETE /api/v1/admin/reports/<report_id>/ : Suppression d'un signalement.
+    """
+    permission_classes = [IsManagerOrAdminUser]
+
+    def get(self, request, report_id):
+        from django.shortcuts import get_object_or_404
+        report = get_object_or_404(SpamReport, id=report_id)
+        num = BlacklistedNumber.objects.filter(phone_hash=report.phone_hash).first()
+        return Response({
+            'id': str(report.id),
+            'phone_hash': report.phone_hash,
+            'masked_number': num.masked_number if num and num.masked_number else 'Inconnu',
+            'category': report.category,
+            'comment': report.comment or '',
+            'created_at': report.created_at.isoformat(),
+            'reporter_email': report.reporter.email if report.reporter else 'Anonyme',
+            'risk_score': num.risk_score if num else 0,
+        })
+
+    def delete(self, request, report_id):
+        from django.shortcuts import get_object_or_404
+        report = get_object_or_404(SpamReport, id=report_id)
+        report.delete()
+        return Response({'success': True, 'message': 'Signalement supprimé avec succès.'})
