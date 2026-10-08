@@ -56,7 +56,7 @@ graph TD
     Controllers --> UseCases
     UseCases --> RepoInterfaces
     UseCases --> Entities
-    RepoImpl ..|> RepoInterfaces
+    RepoImpl -.-> RepoInterfaces
     RepoImpl --> DataSources
     DataSources --> Core_Layer
     Core_Layer -. Partage SQLite .-> Native_Android
@@ -107,7 +107,7 @@ flowchart TD
     Telecom -->|Appel entrant détecté| ScreenService
     ScreenService -->|Vérification empreinte < 2 ms| NativeDB
     NativeDB -->|Lecture indexée B-Tree| LocalDB
-    LocalDB <--|Mise à jour SQLite| StateMgr
+    LocalDB  -->|Mise à jour SQLite| StateMgr
     
     UI -->|Action utilisateur| StateMgr
     StateMgr -->|Hachage normalisé| CryptoEngine
