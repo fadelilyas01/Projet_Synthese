@@ -215,12 +215,15 @@ class RegionalThreatCard extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Text(
-                        '${l10n?.regionalAlertPrefix ?? "Alerte Indicatif"} (${highest.areaCode})',
-                        style: TextStyle(
-                          color: alertColor,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 14,
+                      Expanded(
+                        child: Text(
+                          '${l10n?.regionalAlertPrefix ?? "Alerte Indicatif"} (${highest.areaCode})',
+                          style: TextStyle(
+                            color: alertColor,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 14,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       const SizedBox(width: 8),

@@ -16,6 +16,7 @@ import '../../../../core/services/regional_compliance_service.dart';
 import '../widgets/region_selection_sheet.dart';
 import 'faq_page.dart';
 import '../../../../core/widgets/app_logo.dart';
+import '../../../../core/services/biometric_service.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -26,6 +27,41 @@ class SettingsPage extends ConsumerStatefulWidget {
 
 class _SettingsPageState extends ConsumerState<SettingsPage> {
   bool _isSyncing = false;
+  final BiometricService _biometricService = BiometricService();
+  bool _biometricEnabled = false;
+  bool _biometricAvailable = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initBiometrics();
+  }
+
+  Future<void> _initBiometrics() async {
+    final available = await _biometricService.isBiometricsAvailable();
+    final enabled = await _biometricService.isBiometricEnabled();
+    if (mounted) {
+      setState(() {
+        _biometricAvailable = available;
+        _biometricEnabled = enabled;
+      });
+    }
+  }
+
+  Future<void> _toggleBiometric(bool val) async {
+    if (val) {
+      final authenticated = await _biometricService.authenticate(
+        reason: 'Authentifiez-vous pour activer la protection biométrique',
+      );
+      if (authenticated) {
+        await _biometricService.setBiometricEnabled(true);
+        if (mounted) setState(() => _biometricEnabled = true);
+      }
+    } else {
+      await _biometricService.setBiometricEnabled(false);
+      if (mounted) setState(() => _biometricEnabled = false);
+    }
+  }
 
   Future<void> _toggleAutoBlock(bool val) async {
     if (val) {
@@ -214,6 +250,22 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   style: const TextStyle(fontSize: 12, color: Colors.grey),
                 ),
                 secondary: const Icon(Icons.bedtime_rounded, color: Colors.indigoAccent, size: 24),
+              ),
+              const Divider(height: 1, indent: 56),
+              SwitchListTile(
+                value: _biometricEnabled,
+                onChanged: _biometricAvailable ? _toggleBiometric : null,
+                title: Text(
+                  currentLocale.languageCode == 'en' ? 'Biometric Lock (Face ID / Fingerprint)' : 'Protection Biométrique (Face ID / Empreinte)',
+                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                ),
+                subtitle: Text(
+                  _biometricAvailable
+                      ? (currentLocale.languageCode == 'en' ? 'Require biometric check for sensitive settings & admin' : 'Exiger la biométrie pour l\'accès d\'administration')
+                      : (currentLocale.languageCode == 'en' ? 'Biometric hardware unavailable' : 'Capteur biométrique non disponible'),
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                secondary: const Icon(Icons.fingerprint_rounded, color: AppTheme.accentOrange, size: 24),
               ),
               const Divider(height: 1, indent: 56),
               ListTile(
@@ -496,11 +548,22 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                   ),
                   trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.grey),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const AdminConsolePage()),
-                    );
+                  onTap: () async {
+                    final isEn = currentLocale.languageCode == 'en';
+                    if (_biometricEnabled) {
+                      final ok = await _biometricService.authenticate(
+                        reason: isEn
+                            ? 'Biometric authentication required to access Admin Console'
+                            : 'Authentification biométrique requise pour accéder à la Console Admin',
+                      );
+                      if (!ok) return;
+                    }
+                    if (context.mounted) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const AdminConsolePage()),
+                      );
+                    }
                   },
                 ),
               ],
@@ -632,21 +695,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               child: Text(l10n?.btnLogout ?? 'Déconnexion', style: const TextStyle(color: AppTheme.accentRed, fontSize: 12, fontWeight: FontWeight.bold)),
             ),
           ),
-          if (!user.canModerate) ...[
-            Divider(height: 1, color: borderColor),
-            ListTile(
-              dense: true,
-              leading: const Icon(Icons.admin_panel_settings_outlined, color: AppTheme.accentOrange, size: 20),
-              title: Text(
-                ref.watch(localeProvider).languageCode == 'en'
-                    ? 'Switch to Team / Admin Account'
-                    : 'Accéder à l\'espace Administration & Modération',
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-              ),
-              trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: Colors.grey),
-              onTap: () => AuthBottomSheet.show(context, initialAdmin: true),
-            ),
-          ],
         ],
       );
     }
@@ -663,39 +711,18 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               color: AppTheme.primaryColor.withValues(alpha: 0.12),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.person_rounded, color: AppTheme.primaryColor, size: 22),
+            child: const Icon(Icons.account_circle_outlined, color: AppTheme.primaryColor, size: 24),
           ),
           title: Text(
-            isEn ? 'Citizen Account' : 'Espace Citoyen',
+            isEn ? 'Sign In / Account' : 'Se connecter',
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
           ),
           subtitle: Text(
-            isEn ? 'Sign in or register to sync your protections' : 'Se connecter ou s\'inscrire pour synchroniser vos protections',
+            isEn ? 'Access your account or create a new one' : 'Accéder à votre compte ou vous inscrire',
             style: const TextStyle(fontSize: 12, color: Colors.grey),
           ),
           trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.grey),
-          onTap: () => AuthBottomSheet.show(context, initialAdmin: false),
-        ),
-        Divider(height: 1, color: borderColor),
-        ListTile(
-          leading: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: AppTheme.accentOrange.withValues(alpha: 0.12),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.admin_panel_settings_rounded, color: AppTheme.accentOrange, size: 22),
-          ),
-          title: Text(
-            isEn ? 'Administration & Team Portal' : 'Espace Équipe & Modération',
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-          ),
-          subtitle: Text(
-            isEn ? 'Restricted access for moderators and administrators' : 'Accès réservé aux modérateurs et administrateurs',
-            style: const TextStyle(fontSize: 12, color: Colors.grey),
-          ),
-          trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.grey),
-          onTap: () => AuthBottomSheet.show(context, initialAdmin: true),
+          onTap: () => AuthBottomSheet.show(context),
         ),
       ],
     );

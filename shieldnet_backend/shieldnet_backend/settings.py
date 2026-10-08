@@ -54,6 +54,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'shieldnet_backend.settings.APIVersionHeaderMiddleware',
     'django.middleware.gzip.GZipMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
@@ -152,6 +153,7 @@ REST_FRAMEWORK = {
         'user': '600/minute',
     },
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'EXCEPTION_HANDLER': 'shield_api.exceptions.shieldnet_exception_handler',
 }
 
 SIMPLE_JWT = {
@@ -198,3 +200,27 @@ if not DEBUG:
     SECURE_HSTS_PRELOAD = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
+
+
+# Middleware d'en-tête de versioning et d'observabilité
+class APIVersionHeaderMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        response = self.get_response(request)
+        response['X-API-Version'] = '1.0.0'
+        return response
+
+
+# Validation stricte de longueur minimale des secrets cryptographiques
+def _validate_secrets():
+    if not DEBUG:
+        if len(SECRET_KEY) < 32:
+            raise ImproperlyConfigured("SECRET_KEY trop courte en production (minimum 32 caractères).")
+        if len(API_KEY) < 16:
+            raise ImproperlyConfigured("API_KEY trop courte en production (minimum 16 caractères).")
+        if len(HASH_SALT) < 16:
+            raise ImproperlyConfigured("HASH_SALT trop court en production (minimum 16 caractères).")
+
+_validate_secrets()

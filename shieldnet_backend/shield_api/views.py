@@ -1146,3 +1146,60 @@ class AdminReportDetailView(APIView):
         report = get_object_or_404(SpamReport, id=report_id)
         report.delete()
         return Response({'success': True, 'message': 'Signalement supprimé avec succès.'})
+
+
+class HealthLiveView(APIView):
+    """
+    GET /api/v1/health/live/
+    Sonde Liveness Probe (Kubernetes / Docker).
+    Indique que le processus du serveur HTTP est vivant et répond aux requêtes.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        return Response({
+            'status': 'live',
+            'timestamp': timezone.now().isoformat(),
+            'version': '1.0.0',
+        })
+
+
+class HealthReadyView(APIView):
+    """
+    GET /api/v1/health/ready/
+    Sonde Readiness Probe (Kubernetes / Docker).
+    Vérifie l'état opérationnel réel des dépendances critiques (Base de données et Cache).
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        from django.db import connection
+        from django.core.cache import cache
+        db_ok = False
+        cache_ok = False
+        errors = []
+
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT 1")
+            db_ok = True
+        except Exception as e:
+            errors.append(f"Database error: {str(e)}")
+
+        try:
+            cache.set('ready_check', '1', timeout=5)
+            cache_ok = cache.get('ready_check') == '1'
+        except Exception as e:
+            errors.append(f"Cache error: {str(e)}")
+
+        is_ready = db_ok and cache_ok
+        status_code = 200 if is_ready else 503
+
+        return Response({
+            'status': 'ready' if is_ready else 'not_ready',
+            'db_connected': db_ok,
+            'cache_connected': cache_ok,
+            'errors': errors,
+            'timestamp': timezone.now().isoformat(),
+            'version': '1.0.0',
+        }, status=status_code)

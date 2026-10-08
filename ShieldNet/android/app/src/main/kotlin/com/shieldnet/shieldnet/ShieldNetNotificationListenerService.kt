@@ -32,12 +32,12 @@ class ShieldNetNotificationListenerService : NotificationListenerService() {
             "com.verizon.messaging.vzmsgs"
         )
 
-        // Expressions régulières de détection de phishing bancaire et administratif
+        // Expressions régulières de détection de phishing bancaire, postal et administratif
         private val SUSPICIOUS_PATTERNS = listOf(
-            Pattern.compile("(?i)(interac|desjardins|scotiabank|rbc|td|bmo|cibc|national[ -]?bank)"),
-            Pattern.compile("(?i)(remboursement|virement[ -]?en[ -]?attente|bloqu[eé]|suspendu|dépôt|fisc|arc|cra|revenu[ -]?qu[eé]bec)"),
-            Pattern.compile("(?i)(bit\\.ly|tinyurl\\.com|t\\.co|is\\.gd|rb\\.gy|cutt\\.ly|ow\\.ly|shorturl)"),
-            Pattern.compile("(?i)(cliquez[ -]?ici|r[eé]clamez|connectez[ -]?vous|urgent|imm[eé]diat|amende|contravention)")
+            Pattern.compile("(?i)(interac|desjardins|scotiabank|rbc|td|bmo|cibc|national[ -]?bank|zelle|venmo|chase|wellsfargo)"),
+            Pattern.compile("(?i)(remboursement|virement[ -]?en[ -]?attente|bloqu[eé]|suspendu|dépôt|fisc|arc|cra|revenu[ -]?qu[eé]bec|saaq|ramq|hydro[ -]?qu[eé]bec|usps|canadapost|postes[ -]?canada|purolator|fedex|ups|dhl)"),
+            Pattern.compile("(?i)(bit\\.ly|tinyurl\\.com|t\\.co|is\\.gd|rb\\.gy|cutt\\.ly|ow\\.ly|shorturl|\\.xyz|\\.top|\\.click|\\.club|\\.sbs|\\.rest|\\.online|\\.site)"),
+            Pattern.compile("(?i)(cliquez[ -]?ici|r[eé]clamez|connectez[ -]?vous|urgent|imm[eé]diat|amende|contravention|frais[ -]?de[ -]?douane|frais[ -]?de[ -]?port|colis|livraison|adresse[ -]?incorrecte)")
         )
     }
 

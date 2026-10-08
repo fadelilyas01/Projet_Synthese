@@ -695,10 +695,32 @@ class _ActivityPageState extends ConsumerState<ActivityPage> with SingleTickerPr
           final hash = rawNum.isNotEmpty ? CryptoUtils.hashPhoneNumber(rawNum) : '';
           final isBlocked = blockedHashes.contains(hash);
           final dateStr = _formatRelativeTime(call.timestamp, l10n);
+          final isEn = (l10n?.localeName == 'en') || (Localizations.localeOf(context).languageCode == 'en');
+
+          IconData callIcon;
+          Color callColor;
+          String statusDesc;
+
+          if (isBlocked || call.callType == call_log.CallType.blocked || call.callType == call_log.CallType.rejected) {
+            callIcon = Icons.call_end_rounded;
+            callColor = AppTheme.accentRed;
+            statusDesc = l10n?.spamBlocked ?? (isEn ? 'Spam bloqué' : 'Spam bloqué');
+          } else if (call.callType == call_log.CallType.outgoing) {
+            callIcon = Icons.call_made_rounded;
+            callColor = AppTheme.primaryColor;
+            statusDesc = isEn ? 'Appel sortant' : 'Appel sortant';
+          } else if (call.callType == call_log.CallType.missed) {
+            callIcon = Icons.call_missed_rounded;
+            callColor = AppTheme.accentOrange;
+            statusDesc = isEn ? 'Appel manqué' : 'Appel manqué';
+          } else {
+            callIcon = Icons.call_received_rounded;
+            callColor = AppTheme.accentGreen;
+            statusDesc = l10n?.incomingCall ?? (isEn ? 'Appel entrant' : 'Appel entrant');
+          }
 
           final defaultUnknown = l10n?.unknownCaller ?? 'Inconnu';
           final titleText = call.name?.isNotEmpty == true ? call.name! : (rawNum.isNotEmpty ? CryptoUtils.maskPhoneNumber(rawNum) : defaultUnknown);
-          final statusDesc = isBlocked ? (l10n?.spamBlocked ?? 'Spam bloqué') : (l10n?.incomingCall ?? 'Appel entrant');
 
           final itemWidget = Container(
             decoration: BoxDecoration(
@@ -710,12 +732,12 @@ class _ActivityPageState extends ConsumerState<ActivityPage> with SingleTickerPr
               leading: Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: isBlocked ? AppTheme.accentRed.withValues(alpha: 0.1) : AppTheme.accentGreen.withValues(alpha: 0.1),
+                  color: callColor.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  isBlocked ? Icons.call_end_rounded : Icons.call_received_rounded,
-                  color: isBlocked ? AppTheme.accentRed : AppTheme.accentGreen,
+                  callIcon,
+                  color: callColor,
                   size: 20,
                 ),
               ),
