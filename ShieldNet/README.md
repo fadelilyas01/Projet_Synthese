@@ -1,6 +1,6 @@
-# ShieldNet — Application mobile Android (Flutter & Kotlin)
+# ShieldNet — Application Multiplateforme & Natif Android (Flutter & Kotlin)
 
-Application mobile cliente de la plateforme ShieldNet, conçue pour filtrer les appels indésirables et détecter les messages frauduleux sur Android, en respectant la vie privée de l'utilisateur (conformité Loi 25 et LPRPDE).
+Application cliente de la plateforme ShieldNet, conçue pour filtrer les appels indésirables et détecter les messages frauduleux sur Android (avec service natif Kotlin `CallScreeningService`), tout en supportant les environnements multiplateformes (Web, iOS, Windows, macOS, Linux). Elle garantit le respect total de la vie privée de l'utilisateur (conformité Loi 25 et LPRPDE).
 
 L'application prend ses décisions de filtrage directement sur le téléphone. Elle ne transfère jamais le carnet d'adresses vers l'extérieur et ne stocke aucun numéro de téléphone en clair sur les serveurs distants.
 
@@ -31,7 +31,7 @@ L'interception utilise le service natif Android `CallScreeningService` codé en 
 
 ### Pourquoi une décision locale ?
 
-Android exige que le service de filtrage réponde en moins de quelques dizaines de millisecondes. Faire une requête réseau à chaque appel entrant serait trop lent et exposerait la vie privée de l'utilisateur. En stockant la liste des numéros signalés localement dans SQLite (mode *Write-Ahead Logging*), l'application peut décider en moins de 2 millisecondes sans dépendre d'une connexion internet active.
+Android exige que le service de filtrage réponde en moins de quelques dizaines de millisecondes. Faire une requête réseau à chaque appel entrant serait trop lent et exposerait la vie privée de l'utilisateur. En stockant la liste des numéros signalés localement dans SQLite (mode *Write-Ahead Logging*), l'application vise des performances de décision locale inférieures à 2 millisecondes (objectifs mesurés sur matériel Android de référence) sans dépendre d'une connexion internet active.
 
 ---
 
