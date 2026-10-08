@@ -1,3 +1,4 @@
+from django.core.mail import send_mail
 from django.utils import timezone
 
 from django.db.models.signals import post_save, post_delete
@@ -1203,3 +1204,119 @@ class HealthReadyView(APIView):
             'timestamp': timezone.now().isoformat(),
             'version': '1.0.0',
         }, status=status_code)
+
+
+def send_welcome_confirmation_email(user):
+    """Envoie un courriel de bienvenue et de confirmation à l'utilisateur."""
+    if not user.email:
+        return
+    subject = "🛡️ Bienvenue sur ShieldNet — Activation de votre Protection"
+    message = f"""Bonjour {user.first_name or user.username},
+
+Bienvenue sur ShieldNet ! Votre compte ({user.email}) a été créé et sécurisé avec succès.
+
+Fonctionnalités activées sur votre profil :
+- Interception des appels indésirables en sub-2ms (Zero-Knowledge).
+- Moteur d'IA prédictif (Neighbor Spoofing & Robocalls).
+- Inspection proactive des SMS et faux liens de livraison/banque.
+
+Vous pouvez maintenant accéder à l'intégralité des fonctionnalités sur l'application ShieldNet.
+
+L'équipe ShieldNet Security
+"""
+    try:
+        from django.conf import settings
+        from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'no-reply@shieldnet.app')
+        send_mail(
+            subject=subject,
+            message=message,
+            from_email=from_email,
+            recipient_list=[user.email],
+            fail_silently=True,
+        )
+    except Exception:
+        pass
+
+
+import random
+from django.core.cache import cache
+
+class SendEmailOTPView(APIView):
+    """
+    POST /api/v1/auth/email/send-otp/
+    Génère et envoie un code de vérification OTP à 6 chiffres par courriel.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        email = request.data.get('email', '').strip().lower()
+        if not email or '@' not in email:
+            return Response({'detail': 'Adresse courriel invalide.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Génération du code OTP à 6 chiffres
+        otp_code = str(random.randint(100000, 999999))
+        cache.set(f'otp_{email}', otp_code, timeout=600) # Valide 10 minutes
+
+        subject = f"🛡️ Votre code de vérification ShieldNet : {otp_code}"
+        message = f"""Bonjour,
+
+Votre code de vérification à 6 chiffres pour accéder à ShieldNet est :
+
+👉  {otp_code}  👈
+
+Ce code expire dans 10 minutes. Ne le communiquez à personne.
+
+L'équipe ShieldNet Security
+"""
+        try:
+            from django.conf import settings
+            send_mail(
+                subject=subject,
+                message=message,
+                from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'no-reply@shieldnet.app'),
+                recipient_list=[email],
+                fail_silently=True,
+            )
+        except Exception:
+            pass
+
+        return Response({'detail': 'Code de vérification envoyé avec succès à votre adresse courriel.'}, status=status.HTTP_200_OK)
+
+class VerifyEmailOTPView(APIView):
+    """
+    POST /api/v1/auth/email/verify-otp/
+    Vérifie le code OTP à 6 chiffres et authentifie/inscrit l'utilisateur.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        email = request.data.get('email', '').strip().lower()
+        code = request.data.get('code', '').strip()
+
+        if not email or not code:
+            return Response({'detail': 'Courriel et code requis.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        cached_code = cache.get(f'otp_{email}')
+        if not cached_code or cached_code != code:
+            return Response({'detail': 'Code de vérification incorrect ou expiré.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Invalidation du code utilisé
+        cache.delete(f'otp_{email}')
+
+        # Récupération ou création automatique du compte
+        user = User.objects.filter(email__iexact=email).first()
+        if not user:
+            username = email
+            random_password = secrets.token_urlsafe(24)
+            user = User.objects.create_user(username=username, email=email, password=random_password)
+            UserProfile.objects.get_or_create(user=user)
+            send_welcome_confirmation_email(user)
+
+        refresh = RefreshToken.for_user(user)
+        return Response({
+            'user': UserSerializer(user).data,
+            'tokens': {
+                'refresh': str(refresh),
+                'access': str(refresh.access_token),
+            }
+        }, status=status.HTTP_200_OK)

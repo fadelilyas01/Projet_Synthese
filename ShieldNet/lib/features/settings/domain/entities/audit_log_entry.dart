@@ -24,10 +24,14 @@ class AuditLogEntry {
       id: json['id']?.toString() ?? '',
       action: json['action'] as String? ?? '',
       source: json['source'] as String? ?? 'web',
-      userUsername: json['user_username'] as String? ?? 'Système',
+      userUsername: (json['username'] ?? json['user_username']) as String? ?? 'Système',
       targetHash: json['target_hash'] as String? ?? '',
       createdAt: json['created_at'] as String? ?? '',
-      details: json['details'] is Map<String, dynamic> ? json['details'] : null,
+      details: json['details'] is Map<String, dynamic>
+          ? json['details'] as Map<String, dynamic>
+          : (json['details'] != null && json['details'].toString().isNotEmpty
+              ? {'info': json['details'].toString()}
+              : null),
     );
   }
 

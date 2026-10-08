@@ -498,7 +498,15 @@ class AuthService {
 
   /// Récupère le statut global de synchronisation et la version active
   Future<Map<String, dynamic>> getSyncStatus() async {
-    final response = await _dio.get('sync/status/');
+    final token = await getAccessToken();
+    final response = await _dio.get(
+      'sync/status/',
+      options: Options(
+        headers: {
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      ),
+    );
     if (response.statusCode == 200 && response.data != null) {
       return response.data as Map<String, dynamic>;
     }

@@ -58,6 +58,7 @@ dependencies:
   google_fonts: ^6.2.1
   url_launcher: ^6.3.0
   local_auth: ^2.3.0
+  google_sign_in: ^6.2.1
 
 
 dev_dependencies:

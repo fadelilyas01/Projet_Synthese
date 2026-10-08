@@ -9,7 +9,7 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
-  String get appTitle => 'ShieldNet Pro Anti-Spam';
+  String get appTitle => 'ShieldNet Anti-Spam';
 
   @override
   String get tabProtection => 'Protection';

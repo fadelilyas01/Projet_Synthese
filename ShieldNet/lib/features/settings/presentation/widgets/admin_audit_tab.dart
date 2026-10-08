@@ -55,7 +55,7 @@ class AdminAuditTab extends StatelessWidget {
   Widget _buildAuditLogCard(Map<String, dynamic> log, Color cardBg, Color borderColor, bool isEn) {
     final action = log['action'] as String? ?? '';
     final source = log['source'] as String? ?? 'web';
-    final username = log['user_username'] as String? ?? (isEn ? 'System' : 'Système');
+    final username = (log['username'] ?? log['user_username']) as String? ?? (isEn ? 'System' : 'Système');
     final targetHash = log['target_hash'] as String? ?? '';
     final createdAt = log['created_at'] as String? ?? '';
     final details = log['details'];

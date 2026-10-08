@@ -9,6 +9,7 @@ import 'package:shieldnet/core/services/regional_compliance_service.dart';
 import 'package:shieldnet/l10n/app_localizations.dart';
 import 'package:shieldnet/main.dart';
 import 'package:shieldnet/core/widgets/app_logo.dart';
+import 'package:shieldnet/core/widgets/auth_gate.dart';
 
 class OnboardingPage extends ConsumerStatefulWidget {
   const OnboardingPage({super.key});
@@ -195,7 +196,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
 
     if (mounted) {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const MainTabNavigationScreen()),
+        MaterialPageRoute(builder: (_) => const AuthGate(child: MainTabNavigationScreen())),
       );
     }
   }

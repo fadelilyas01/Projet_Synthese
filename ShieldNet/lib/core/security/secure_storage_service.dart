@@ -74,7 +74,7 @@ class WhitelistedNumber {
   }
 }
 
-/// Helper SQLite local sécurisé pour ShieldNet Pro
+/// Helper SQLite local sécurisé pour ShieldNet
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
   static Database? _database;

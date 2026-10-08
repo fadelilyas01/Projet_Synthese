@@ -163,7 +163,13 @@ class AdminOverviewTab extends ConsumerWidget {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text('🇨🇦 Canada', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                              const Expanded(
+                                child: Text(
+                                  '🇨🇦 Canada',
+                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
                               Text(
                                 '${(stats?['users_by_country'] as Map?)?['CA'] ?? 0}',
                                 style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: Color(0xFF0284C7)),
@@ -191,7 +197,13 @@ class AdminOverviewTab extends ConsumerWidget {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(isEn ? '🇺🇸 United States' : '🇺🇸 États-Unis', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                              Expanded(
+                                child: Text(
+                                  isEn ? '🇺🇸 United States' : '🇺🇸 États-Unis',
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
                               Text(
                                 '${(stats?['users_by_country'] as Map?)?['US'] ?? 0}',
                                 style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: Color(0xFF10B981)),
@@ -336,8 +348,8 @@ class AdminOverviewTab extends ConsumerWidget {
               const SizedBox(height: 8),
               Text(
                 isEn
-                    ? 'Active numbers in production: ${syncStatus?['active_count'] ?? stats?['total_blacklisted'] ?? '—'} • Cache automatically invalidated on admin actions.'
-                    : 'Numéros actifs en production: ${syncStatus?['active_count'] ?? stats?['total_blacklisted'] ?? '—'} • Cache invalidé automatiquement lors des actions admin.',
+                    ? 'Active numbers in production: ${syncStatus?['total_active'] ?? syncStatus?['active_count'] ?? stats?['total_blacklisted'] ?? '—'} • Cache automatically invalidated on admin actions.'
+                    : 'Numéros actifs en production: ${syncStatus?['total_active'] ?? syncStatus?['active_count'] ?? stats?['total_blacklisted'] ?? '—'} • Cache invalidé automatiquement lors des actions admin.',
                 style: const TextStyle(fontSize: 12, color: Colors.grey),
               ),
               const SizedBox(height: 12),

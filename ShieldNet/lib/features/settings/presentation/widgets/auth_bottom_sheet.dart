@@ -2,27 +2,34 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/providers/auth_provider.dart';
 import '../../../../core/services/regional_compliance_service.dart';
+import '../../../../core/services/google_sign_in_service.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/google_sign_in_button.dart';
+import '../../../../core/widgets/biometric_enrollment_sheet.dart';
 import '../pages/admin_console_page.dart';
 
 /// Boîte de dialogue et modale d'authentification unifiée (Utilisateurs & Administrateurs)
 class AuthBottomSheet extends ConsumerStatefulWidget {
   final bool initialAdmin;
+  final bool initialRegister;
 
   const AuthBottomSheet({
     super.key,
     this.initialAdmin = false,
+    this.initialRegister = false,
   });
 
   /// Ouvre la modale de connexion unifiée
-  static void show(BuildContext context, {bool initialAdmin = false}) {
+  static void show(BuildContext context, {bool initialAdmin = false, bool initialRegister = false}) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => AuthBottomSheet(initialAdmin: initialAdmin),
+      builder: (ctx) => AuthBottomSheet(
+        initialAdmin: initialAdmin,
+        initialRegister: initialRegister,
+      ),
     );
   }
 
@@ -31,7 +38,7 @@ class AuthBottomSheet extends ConsumerStatefulWidget {
 }
 
 class _AuthBottomSheetState extends ConsumerState<AuthBottomSheet> {
-  bool _isLogin = true;
+  late bool _isLogin;
   bool _obscurePassword = true;
 
   final _emailController = TextEditingController();
@@ -40,6 +47,12 @@ class _AuthBottomSheetState extends ConsumerState<AuthBottomSheet> {
 
   bool _loading = false;
   String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _isLogin = !widget.initialRegister;
+  }
 
   @override
   void dispose() {
@@ -53,6 +66,9 @@ class _AuthBottomSheetState extends ConsumerState<AuthBottomSheet> {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
     final isEn = Localizations.localeOf(context).languageCode == 'en';
+
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
 
     if (email.isEmpty || password.isEmpty) {
       setState(() => _errorMessage = isEn
@@ -84,8 +100,9 @@ class _AuthBottomSheetState extends ConsumerState<AuthBottomSheet> {
       final isAdmin = user != null && user.canModerate;
 
       if (mounted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
+        navigator.pop();
+
+        messenger.showSnackBar(
           SnackBar(
             content: Row(
               children: [
@@ -110,10 +127,11 @@ class _AuthBottomSheetState extends ConsumerState<AuthBottomSheet> {
         );
 
         if (isAdmin) {
-          Navigator.push(
-            context,
+          navigator.push(
             MaterialPageRoute(builder: (_) => const AdminConsolePage()),
           );
+        } else {
+          BiometricEnrollmentSheet.showIfEligible(navigator.context);
         }
       }
     } catch (e) {
@@ -128,108 +146,62 @@ class _AuthBottomSheetState extends ConsumerState<AuthBottomSheet> {
 
   Future<void> _handleGoogleSignIn() async {
     final isEn = Localizations.localeOf(context).languageCode == 'en';
-    final emailController = TextEditingController();
-    final nameController = TextEditingController();
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
 
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Row(
-          children: [
-            const Icon(Icons.account_circle_outlined, color: AppTheme.primaryColor),
-            const SizedBox(width: 8),
-            Text(isEn ? 'Google Sign-In' : 'Connexion Google'),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              isEn
-                  ? 'Simulate sign in with your Google account:'
-                  : 'Simulez la connexion avec votre compte Google :',
-              style: const TextStyle(fontSize: 13),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: emailController,
-              keyboardType: TextInputType.emailAddress,
-              decoration: InputDecoration(
-                labelText: isEn ? 'Google Email' : 'Email Google',
-                hintText: 'user@gmail.com',
-                prefixIcon: const Icon(Icons.email_outlined),
-              ),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: nameController,
-              decoration: InputDecoration(
-                labelText: isEn ? 'Full Name (optional)' : 'Nom complet (optionnel)',
-                hintText: 'John Doe',
-                prefixIcon: const Icon(Icons.person_outline),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(isEn ? 'Cancel' : 'Annuler'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (emailController.text.trim().isNotEmpty) {
-                Navigator.pop(ctx, true);
-              }
-            },
-            child: Text(isEn ? 'Continue' : 'Continuer'),
-          ),
-        ],
-      ),
-    );
-
-    if (result == true && emailController.text.trim().isNotEmpty) {
-      await _performGoogleLogin(
-        emailController.text.trim(),
-        name: nameController.text.trim().isNotEmpty ? nameController.text.trim() : null,
-      );
-    }
-  }
-
-  Future<void> _performGoogleLogin(String email, {String? name}) async {
-    final isEn = Localizations.localeOf(context).languageCode == 'en';
     setState(() {
       _loading = true;
       _errorMessage = null;
     });
 
     try {
-      await ref.read(authNotifierProvider.notifier).googleLogin(email, name: name);
-      final user = ref.read(authNotifierProvider);
-      final isAdmin = user != null && user.canModerate;
+      final googleService = GoogleSignInService();
+      final result = await googleService.signInWithGoogle();
 
-      if (mounted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              isAdmin
-                  ? (isEn ? 'Welcome to the administration console!' : 'Bienvenue dans la console d\'administration !')
-                  : (isEn ? 'Connected with Google!' : 'Connecté avec Google !'),
-              style: const TextStyle(fontWeight: FontWeight.w600),
+      if (result.success && result.user != null) {
+        await ref.read(authNotifierProvider.notifier).checkCurrentUser();
+        final user = ref.read(authNotifierProvider);
+        final isAdmin = user != null && user.canModerate;
+
+        if (mounted) {
+          navigator.pop();
+
+          messenger.showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.check_circle_rounded, color: Colors.white),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      isAdmin
+                          ? (isEn ? 'Welcome to the administration console!' : 'Bienvenue dans la console d\'administration !')
+                          : (isEn ? 'Signed in with Google!' : 'Connexion Google réussie !'),
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: AppTheme.accentGreen,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
-            backgroundColor: AppTheme.accentGreen,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        );
-
-        if (isAdmin) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const AdminConsolePage()),
           );
+
+          if (isAdmin) {
+            navigator.push(
+              MaterialPageRoute(builder: (_) => const AdminConsolePage()),
+            );
+          } else {
+            BiometricEnrollmentSheet.showIfEligible(navigator.context);
+          }
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _loading = false;
+            _errorMessage = result.errorMessage;
+          });
         }
       }
     } catch (e) {
@@ -296,11 +268,11 @@ class _AuthBottomSheetState extends ConsumerState<AuthBottomSheet> {
                       Text(
                         _isLogin
                             ? (isEn
-                                ? 'Sign in to access your account.'
-                                : 'Connectez-vous pour accéder à votre espace.')
+                                ? 'Sign in to access your protected numbers and settings.'
+                                : 'Connectez-vous pour retrouver vos numéros protégés et réglages.')
                             : (isEn
-                                ? 'Create your account to join ShieldNet.'
-                                : 'Créez votre compte pour rejoindre ShieldNet.'),
+                                ? 'Set up your account in seconds with complete privacy.'
+                                : 'Protégez vos appels en toute simplicité et confidentialité.'),
                         style: const TextStyle(fontSize: 13, color: Colors.grey),
                       ),
                     ],
@@ -312,9 +284,70 @@ class _AuthBottomSheetState extends ConsumerState<AuthBottomSheet> {
                 ),
               ],
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
 
-            // Bouton Google
+            // Encadré d'information clair et rassurant
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryColor.withValues(alpha: isDark ? 0.12 : 0.06),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: AppTheme.primaryColor.withValues(alpha: isDark ? 0.25 : 0.15),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.verified_user_outlined, color: AppTheme.primaryColor, size: 18),
+                      const SizedBox(width: 8),
+                      Text(
+                        _isLogin
+                            ? (isEn ? 'Your account, your peace of mind' : 'Votre compte, votre sérénité')
+                            : (isEn ? 'Why create a ShieldNet account?' : 'Pourquoi créer un compte ?'),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                          color: AppTheme.primaryColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  _buildBenefitRow(
+                    icon: Icons.sync_rounded,
+                    title: isEn ? 'Secure cloud backup' : 'Sauvegarde sécurisée',
+                    desc: isEn
+                        ? 'Keep your blocked numbers & settings synced across devices.'
+                        : 'Retrouvez vos préférences et numéros bloqués sur tous vos appareils.',
+                    isDark: isDark,
+                  ),
+                  const SizedBox(height: 6),
+                  _buildBenefitRow(
+                    icon: Icons.lock_outline_rounded,
+                    title: isEn ? 'Strict privacy' : 'Confidentialité totale',
+                    desc: isEn
+                        ? 'Your address book and private calls are never shared with anyone.'
+                        : 'Vos contacts et vos appels personnels ne sont jamais partagés.',
+                    isDark: isDark,
+                  ),
+                  const SizedBox(height: 6),
+                  _buildBenefitRow(
+                    icon: Icons.offline_bolt_outlined,
+                    title: isEn ? 'Instant protection' : 'Protection instantanée',
+                    desc: isEn
+                        ? 'No complex setup required. ShieldNet protects your line quietly.'
+                        : 'Votre téléphone veille sur vous sans interrompre vos proches.',
+                    isDark: isDark,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 18),
+
+            // Bouton Google officiel
             GoogleSignInButton(
               isLoading: _loading,
               onPressed: _loading ? null : _handleGoogleSignIn,
@@ -453,9 +486,61 @@ class _AuthBottomSheetState extends ConsumerState<AuthBottomSheet> {
                 ),
               ),
             ),
+            const SizedBox(height: 14),
+
+            // Mention rassurante de confidentialité
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.shield_outlined, size: 13, color: Colors.grey),
+                const SizedBox(width: 6),
+                Text(
+                  isEn
+                      ? 'Strict privacy protection • Zero data sold'
+                      : 'Respect de la vie privée • Zéro partage de vos données',
+                  style: const TextStyle(fontSize: 10, color: Colors.grey),
+                ),
+              ],
+            ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildBenefitRow({
+    required IconData icon,
+    required String title,
+    required String desc,
+    required bool isDark,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 2),
+          child: Icon(icon, size: 14, color: AppTheme.primaryColor),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: RichText(
+            text: TextSpan(
+              style: TextStyle(
+                fontSize: 11,
+                height: 1.35,
+                color: isDark ? Colors.grey[300] : Colors.grey[800],
+              ),
+              children: [
+                TextSpan(
+                  text: '$title : ',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                TextSpan(text: desc),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

@@ -383,7 +383,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   l10n?.settingSeniorModeDesc ?? 'Agrandit les textes, renforce les contrastes et simplifie l\'accueil',
                   style: const TextStyle(fontSize: 12, color: Colors.grey),
                 ),
-                secondary: const Icon(Icons.elderly_rounded, color: AppTheme.primaryColor, size: 24),
+                secondary: const Icon(Icons.accessibility_new_rounded, color: AppTheme.primaryColor, size: 24),
               ),
               const Divider(height: 1, indent: 56),
               ListTile(

@@ -101,7 +101,7 @@ abstract class AppLocalizations {
   /// No description provided for @appTitle.
   ///
   /// In fr, this message translates to:
-  /// **'ShieldNet Pro Anti-Spam'**
+  /// **'ShieldNet Anti-Spam'**
   String get appTitle;
 
   /// No description provided for @tabProtection.

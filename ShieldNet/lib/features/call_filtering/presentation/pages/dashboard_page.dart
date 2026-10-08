@@ -23,6 +23,8 @@ import '../widgets/device_integrity_banner.dart';
 import '../../../community/presentation/widgets/citizen_impact_card.dart';
 import '../../../settings/presentation/pages/settings_page.dart';
 import '../../../../core/widgets/app_logo.dart';
+import '../widgets/telecom_security_tip_card.dart';
+import '../widgets/peace_of_mind_summary_card.dart';
 
 class DashboardPage extends ConsumerStatefulWidget {
   const DashboardPage({super.key});
@@ -290,6 +292,37 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
     }
   }
 
+  Widget _buildCalmBadge({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required bool isDark,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: isDark ? 0.14 : 0.08),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final protectionState = ref.watch(protectionStatusProvider);
@@ -339,10 +372,11 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
         child: ListView(
           padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
           children: [
-            // Salutation humaine & bienveillante
+            // Salutation humaine & bienveillante avec badge de statut
             Padding(
               padding: const EdgeInsets.only(bottom: 16.0, top: 2.0),
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
                     child: Column(
@@ -366,6 +400,42 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
                       ],
                     ),
                   ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: (isProtectionActive ? AppTheme.accentGreen : Colors.grey).withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: (isProtectionActive ? AppTheme.accentGreen : Colors.grey).withValues(alpha: 0.3),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 7,
+                          height: 7,
+                          decoration: BoxDecoration(
+                            color: isProtectionActive ? AppTheme.accentGreen : Colors.grey,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          isProtectionActive
+                              ? (isEn ? 'Protected' : 'Protégé')
+                              : (isEn ? 'Paused' : 'En pause'),
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: isProtectionActive ? AppTheme.accentGreen : Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -376,34 +446,108 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
               orElse: () => const SizedBox.shrink(),
             ),
 
-            // BANDEAU MODE SÉNIORS / ACCESSIBILITÉ
+            // BANDEAU MODE SÉNIORS / ACCESSIBILITÉ RENFORCÉE
             if (isSeniorMode) ...[
               Container(
-                margin: const EdgeInsets.only(bottom: 16),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                margin: const EdgeInsets.only(bottom: 18),
+                padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
-                  color: AppTheme.primaryColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(16),
+                  color: AppTheme.primaryColor.withValues(alpha: isDark ? 0.16 : 0.08),
+                  borderRadius: BorderRadius.circular(20),
                   border: Border.all(color: AppTheme.primaryColor, width: 2),
                 ),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.elderly_rounded, color: AppTheme.primaryColor, size: 30),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            l10n?.seniorModeActiveTitle ?? 'Mode Simplifié Actif',
-                            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: AppTheme.primaryColor),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryColor.withValues(alpha: 0.18),
+                            shape: BoxShape.circle,
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            l10n?.seniorModeActiveDesc ?? 'Textes et boutons agrandis. Votre téléphone est protégé contre toute fraude.',
-                            style: const TextStyle(fontSize: 13, height: 1.3),
+                          child: const Icon(Icons.accessibility_new_rounded, color: AppTheme.primaryColor, size: 28),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                l10n?.seniorModeActiveTitle ?? 'Mode Simplifié Actif',
+                                style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17, color: AppTheme.primaryColor),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                isEn
+                                    ? 'High readability & automatic peace of mind.'
+                                    : 'Lisibilité renforcée & protection silencieuse.',
+                                style: const TextStyle(fontSize: 13, color: Colors.grey, fontWeight: FontWeight.w600),
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    const Divider(height: 1),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        const Icon(Icons.check_circle_rounded, color: AppTheme.accentGreen, size: 18),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            isEn ? 'Your family & contacts can always reach you' : 'Vos proches peuvent vous appeler normalement',
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Icon(Icons.check_circle_rounded, color: AppTheme.accentGreen, size: 18),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            isEn ? 'Scammers and automated bots are blocked in silence' : 'Les arnaques et robots sont bloqués sans sonnerie',
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Icon(Icons.check_circle_rounded, color: AppTheme.accentGreen, size: 18),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            isEn ? 'Emergency numbers (911, 811) are strictly allowed' : 'Urgences 911 et santé 811 toujours autorisés',
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.phone_in_talk_rounded, size: 20),
+                        label: Text(
+                          isEn ? 'Check an Unknown Number' : 'Vérifier un numéro suspect',
+                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          elevation: 0,
+                        ),
+                        onPressed: () => _showQuickVerificationDialog(context),
                       ),
                     ),
                   ],
@@ -476,7 +620,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
             ActionHubRow(onVerifyNumber: () => _showQuickVerificationDialog(context)),
             const SizedBox(height: 16),
 
-            // Compteurs statistiques d'activité locale
+            // Compteurs statistiques d'activité locale & télémétrie moteur
             Row(
               children: [
                 Expanded(
@@ -493,10 +637,17 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
                     icon: Icons.shield_outlined,
                     color: AppTheme.primaryColor,
                     count: '$totalBlocked',
-                    label: l10n?.statNumbersBlocked ?? 'Numéros bloqués',
+                    label: l10n?.statNumbersBlocked ?? 'Numéros protégés',
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 18),
+
+            // Bilan valorisant de tranquillité au quotidien
+            PeaceOfMindSummaryCard(
+              interceptedCount: _interceptedCallsCount,
+              isProtectionActive: isProtectionActive,
             ),
             const SizedBox(height: 24),
 
@@ -531,7 +682,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
               data: (entries) {
                 if (entries.isEmpty) {
                   return Container(
-                    padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 24),
+                    padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
                     decoration: BoxDecoration(
                       color: cardBg,
                       borderRadius: BorderRadius.circular(20),
@@ -557,6 +708,32 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
                           l10n?.calmLineDesc ?? 'Aucune menace récente détectée sur votre appareil.',
                           textAlign: TextAlign.center,
                           style: const TextStyle(color: Colors.grey, fontSize: 12),
+                        ),
+                        const SizedBox(height: 14),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 6,
+                          alignment: WrapAlignment.center,
+                          children: [
+                            _buildCalmBadge(
+                              icon: Icons.check_rounded,
+                              label: isEn ? 'Real-time protection' : 'Protection active',
+                              color: AppTheme.accentGreen,
+                              isDark: isDark,
+                            ),
+                            _buildCalmBadge(
+                              icon: Icons.shield_outlined,
+                              label: isEn ? 'Up to date' : 'Protection à jour',
+                              color: AppTheme.primaryColor,
+                              isDark: isDark,
+                            ),
+                            _buildCalmBadge(
+                              icon: Icons.health_and_safety_outlined,
+                              label: isEn ? 'Emergency 911/811 priority' : 'Urgences 911 prioritaires',
+                              color: Colors.teal,
+                              isDark: isDark,
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -615,26 +792,32 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
                 );
               },
             ),
+            const SizedBox(height: 20),
+
+            // Conseil cybersécurité & prévention télécom
+            const TelecomSecurityTipCard(),
             const SizedBox(height: 24),
 
-            // Diagnostic et niveau de sécurité de l'appareil
-            SerenityScoreCard(
-              result: serenityResult,
-              onOpenSettings: () {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsPage()));
-              },
-            ),
-            const SizedBox(height: 16),
-
-            // Engagement communautaire citoyen
-            impactAsync.maybeWhen(
-              data: (impactData) => CitizenImpactCard(
-                data: impactData,
-                onReportSpam: () => _showQuickVerificationDialog(context),
+            // Diagnostic et niveau de sécurité (masqué en mode aînés pour une clarté maximale)
+            if (!isSeniorMode) ...[
+              SerenityScoreCard(
+                result: serenityResult,
+                onOpenSettings: () {
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsPage()));
+                },
               ),
-              orElse: () => const SizedBox.shrink(),
-            ),
-            const SizedBox(height: 24),
+              const SizedBox(height: 16),
+
+              // Engagement communautaire citoyen
+              impactAsync.maybeWhen(
+                data: (impactData) => CitizenImpactCard(
+                  data: impactData,
+                  onReportSpam: () => _showQuickVerificationDialog(context),
+                ),
+                orElse: () => const SizedBox.shrink(),
+              ),
+              const SizedBox(height: 24),
+            ],
           ],
         ),
       ),

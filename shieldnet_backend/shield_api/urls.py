@@ -1,6 +1,8 @@
 from django.urls import register_converter
 from django.urls import path
 from .views import (
+    SendEmailOTPView,
+    VerifyEmailOTPView,
     BloomFilterDownloadView,
     RegionalThreatsView,
     SyncStatusView,
@@ -64,6 +66,8 @@ urlpatterns = [
     path('consensus/<hex_hash:phone_hash>/', ConsensusStatusView.as_view(), name='consensus-status'),
     path('auth/register/', RegisterView.as_view(), name='auth-register'),
     path('auth/login/', EmailLoginView.as_view(), name='auth-login'),
+    path('auth/email/send-otp/', SendEmailOTPView.as_view(), name='auth-send-otp'),
+    path('auth/email/verify-otp/', VerifyEmailOTPView.as_view(), name='auth-verify-otp'),
     path('auth/google/', GoogleLoginView.as_view(), name='auth-google'),
     path('auth/me/', UserProfileView.as_view(), name='auth-me'),
     path('auth/region/', UpdateUserRegionView.as_view(), name='auth-region'),

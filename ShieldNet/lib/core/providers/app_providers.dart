@@ -272,7 +272,6 @@ class AppSettingsNotifier extends StateNotifier<AppSettingsState> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('settings_senior_mode', enabled);
     state = state.copyWith(seniorMode: enabled);
-    _ref.read(seniorModeProvider.notifier).state = enabled;
   }
 }
 
@@ -282,28 +281,9 @@ final appSettingsProvider =
   return AppSettingsNotifier(ref);
 });
 
-/// Notifier et provider pour le mode simplifié seniors / aînés
-class SeniorModeNotifier extends StateNotifier<bool> {
-  SeniorModeNotifier() : super(false) {
-    _load();
-  }
-
-  Future<void> _load() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      state = prefs.getBool('settings_senior_mode') ?? false;
-    } catch (_) {}
-  }
-
-  Future<void> toggle(bool enabled) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('settings_senior_mode', enabled);
-    state = enabled;
-  }
-}
-
-final seniorModeProvider = StateNotifierProvider<SeniorModeNotifier, bool>((ref) {
-  return SeniorModeNotifier();
+/// Provider pour le mode simplifié seniors / aînés réactif
+final seniorModeProvider = Provider<bool>((ref) {
+  return ref.watch(appSettingsProvider).seniorMode;
 });
 
 /// Notifier pour l'activation de la synchronisation automatique en arrière-plan

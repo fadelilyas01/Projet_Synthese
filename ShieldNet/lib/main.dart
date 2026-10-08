@@ -20,6 +20,8 @@ import 'features/onboarding/presentation/pages/onboarding_page.dart';
 
 import 'core/services/background_sync_service.dart';
 
+import 'core/widgets/auth_gate.dart';
+
 export 'core/providers/app_providers.dart';
 
 void main() async {
@@ -120,12 +122,26 @@ class ShieldNetApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeModeProvider);
     final locale = ref.watch(localeProvider);
+    final isSeniorMode = ref.watch(seniorModeProvider);
 
     return MaterialApp(
-      title: 'ShieldNet Pro Anti-Spam',
+      title: 'ShieldNet Anti-Spam',
       debugShowCheckedModeBanner: false,
       themeMode: themeMode,
       locale: locale,
+      builder: (context, child) {
+        if (child == null) return const SizedBox.shrink();
+        if (isSeniorMode) {
+          final mediaQuery = MediaQuery.of(context);
+          return MediaQuery(
+            data: mediaQuery.copyWith(
+              textScaler: const TextScaler.linear(1.22),
+            ),
+            child: child,
+          );
+        }
+        return child;
+      },
       localizationsDelegates: const [
         AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
@@ -139,12 +155,12 @@ class ShieldNetApp extends ConsumerWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       home: hasSeenOnboarding
-          ? const MainTabNavigationScreen()
+          ? const AuthGate(child: MainTabNavigationScreen())
           : const OnboardingPage(),
       onUnknownRoute: (settings) {
         AppLogger.log('[Navigation] Route inconnue interceptée: ${settings.name}');
         return MaterialPageRoute(
-          builder: (_) => const MainTabNavigationScreen(),
+          builder: (_) => const AuthGate(child: MainTabNavigationScreen()),
         );
       },
     );
