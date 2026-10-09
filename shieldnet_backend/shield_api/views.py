@@ -310,6 +310,73 @@ class BatchCheckNumberView(APIView):
         })
 
 
+def send_welcome_confirmation_email(user):
+    """Envoie un courriel de bienvenue et d'activation de la protection ShieldNet."""
+    if not user or not user.email:
+        return
+    display_name = user.first_name or (user.email.split('@')[0] if user.email else 'Utilisateur')
+    subject = "[ShieldNet] Bienvenue sur ShieldNet - Activation de votre Protection"
+    message = f"""Bonjour {display_name},
+
+Bienvenue sur ShieldNet ! Votre compte ({user.email}) a ete cree et securise avec succes.
+
+Votre bouclier de securite mobile est desormais operationnel :
+- Filtrage et blocage des appels frauduleux en temps reel (Zero-Knowledge).
+- Moteur d'IA predictif anti-usurpation (Neighbor Spoofing & Spams).
+- Inspection proactive des SMS et faux liens (colis, banques).
+- Confidentialite totale : vos contacts restent proteges localement par HMAC-SHA256.
+
+Vous pouvez des a present ouvrir l'application ShieldNet pour surveiller votre niveau de protection.
+
+L'equipe ShieldNet Security
+"""
+    html_message = f"""<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0b1120; color: #f1f5f9; margin: 0; padding: 24px; }}
+    .card {{ max-width: 540px; margin: 0 auto; background-color: #1e293b; border-radius: 16px; padding: 32px; border: 1px solid #334155; }}
+    .badge {{ display: inline-block; background-color: #0284c7; color: white; padding: 6px 14px; border-radius: 999px; font-weight: 600; font-size: 13px; margin-bottom: 20px; }}
+    h1 {{ color: #ffffff; font-size: 22px; margin-top: 0; }}
+    p {{ line-height: 1.6; color: #cbd5e1; font-size: 15px; }}
+    ul {{ padding-left: 20px; color: #cbd5e1; line-height: 1.8; }}
+    .footer {{ margin-top: 32px; padding-top: 20px; border-top: 1px solid #334155; font-size: 12px; color: #94a3b8; text-align: center; }}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="badge">&#128737; ShieldNet Cyber-Defense</div>
+    <h1>Bienvenue, {display_name} !</h1>
+    <p>Votre compte <strong>{user.email}</strong> a ete cree et securise avec succes.</p>
+    <p>Votre protection mobile est desormais operationnelle :</p>
+    <ul>
+      <li><strong>Filtrage Zero-Knowledge</strong> : vos appels sont filtres localement sans devoilage de contacts.</li>
+      <li><strong>IA Predictive</strong> : detection automatique des numeros voisins usurpes (Neighbor Spoofing).</li>
+      <li><strong>Inspecteur de SMS</strong> : detection des arnaques de livraison et fausses alertes bancaires.</li>
+    </ul>
+    <p>Ouvrez votre application ShieldNet pour surveiller votre bouclier en temps reel.</p>
+    <div class="footer">
+      Protege par ShieldNet Security &bull; Respect strict de la vie privee
+    </div>
+  </div>
+</body>
+</html>"""
+    try:
+        from django.conf import settings
+        from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'no-reply@shieldnet.app')
+        send_mail(
+            subject=subject,
+            message=message,
+            from_email=from_email,
+            recipient_list=[user.email],
+            html_message=html_message,
+            fail_silently=False,
+        )
+    except Exception as e:
+        import logging
+        logging.getLogger('shield_api').warning(f"Courriel de bienvenue non distribue: {e}")
+
 class RegisterView(APIView):
     """
     POST /api/v1/auth/register/
@@ -322,6 +389,7 @@ class RegisterView(APIView):
         serializer = UserRegisterSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
+            send_welcome_confirmation_email(user)
             refresh = RefreshToken.for_user(user)
             return Response({
                 'user': UserSerializer(user).data,
@@ -397,6 +465,7 @@ class GoogleLoginView(APIView):
             profile.country = country
             profile.province_or_state = province_or_state
             profile.save()
+            send_welcome_confirmation_email(user)
 
         if not user.is_active:
             return Response({'detail': 'Ce compte utilisateur est désactivé.'}, status=status.HTTP_403_FORBIDDEN)
@@ -1206,38 +1275,6 @@ class HealthReadyView(APIView):
         }, status=status_code)
 
 
-def send_welcome_confirmation_email(user):
-    """Envoie un courriel de bienvenue et de confirmation à l'utilisateur."""
-    if not user.email:
-        return
-    subject = "🛡️ Bienvenue sur ShieldNet — Activation de votre Protection"
-    message = f"""Bonjour {user.first_name or user.username},
-
-Bienvenue sur ShieldNet ! Votre compte ({user.email}) a été créé et sécurisé avec succès.
-
-Fonctionnalités activées sur votre profil :
-- Interception des appels indésirables en sub-2ms (Zero-Knowledge).
-- Moteur d'IA prédictif (Neighbor Spoofing & Robocalls).
-- Inspection proactive des SMS et faux liens de livraison/banque.
-
-Vous pouvez maintenant accéder à l'intégralité des fonctionnalités sur l'application ShieldNet.
-
-L'équipe ShieldNet Security
-"""
-    try:
-        from django.conf import settings
-        from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'no-reply@shieldnet.app')
-        send_mail(
-            subject=subject,
-            message=message,
-            from_email=from_email,
-            recipient_list=[user.email],
-            fail_silently=True,
-        )
-    except Exception:
-        pass
-
-
 import random
 from django.core.cache import cache
 
@@ -1257,7 +1294,7 @@ class SendEmailOTPView(APIView):
         otp_code = str(random.randint(100000, 999999))
         cache.set(f'otp_{email}', otp_code, timeout=600) # Valide 10 minutes
 
-        subject = f"🛡️ Votre code de vérification ShieldNet : {otp_code}"
+        subject = f"[ShieldNet] Votre code de verification : {otp_code}"
         message = f"""Bonjour,
 
 Votre code de vérification à 6 chiffres pour accéder à ShieldNet est :
