@@ -9,7 +9,11 @@ import 'google_logo.dart';
 import 'biometric_enrollment_sheet.dart';
 import '../../features/settings/presentation/widgets/auth_bottom_sheet.dart';
 
+import '../services/session_timeout_service.dart';
+import 'session_lock_screen.dart';
+
 /// Verrou d'Authentification (Auth Gate Pattern) avec support de la Protection Biométrique (Face ID / Empreinte)
+/// et du verrouillage automatique de session après 5 minutes d'absence/inactivité.
 class AuthGate extends ConsumerStatefulWidget {
   final Widget child;
 
@@ -19,18 +23,60 @@ class AuthGate extends ConsumerStatefulWidget {
   ConsumerState<AuthGate> createState() => _AuthGateState();
 }
 
-class _AuthGateState extends ConsumerState<AuthGate> {
+class _AuthGateState extends ConsumerState<AuthGate> with WidgetsBindingObserver {
   final BiometricService _biometricService = BiometricService();
+  final SessionTimeoutService _sessionTimeout = SessionTimeoutService.instance;
   bool _isBiometricUnlocked = false;
   bool _isCheckingBiometrics = true;
 
   @override
   void initState() {
     super.initState();
-    _checkBiometricRequirement();
+    WidgetsBinding.instance.addObserver(this);
+    _sessionTimeout.isLockedNotifier.addListener(_onSessionLockChanged);
+    _initSessionAndBiometrics();
   }
 
-  Future<void> _checkBiometricRequirement() async {
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _sessionTimeout.isLockedNotifier.removeListener(_onSessionLockChanged);
+    super.dispose();
+  }
+
+  void _onSessionLockChanged() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      _sessionTimeout.onAppPaused();
+    } else if (state == AppLifecycleState.resumed) {
+      _sessionTimeout.onAppResumed().then((locked) {
+        if (locked && mounted) {
+          setState(() {
+            _isBiometricUnlocked = false;
+          });
+        }
+      });
+    }
+  }
+
+  Future<void> _initSessionAndBiometrics() async {
+    await _sessionTimeout.initialize();
+    if (_sessionTimeout.isLocked) {
+      if (mounted) {
+        setState(() {
+          _isBiometricUnlocked = false;
+          _isCheckingBiometrics = false;
+        });
+      }
+      return;
+    }
+
     final enabled = await _biometricService.isBiometricEnabled();
     if (!enabled) {
       if (mounted) {
@@ -64,7 +110,7 @@ class _AuthGateState extends ConsumerState<AuthGate> {
       return const AuthLockPage();
     }
 
-    // 2. Si l'utilisateur est connecté mais que la vérification biométrique est en cours
+    // 2. Si l'utilisateur est connecté mais que la vérification biométrique initiale est en cours
     if (_isCheckingBiometrics) {
       return const Scaffold(
         body: Center(
@@ -73,55 +119,21 @@ class _AuthGateState extends ConsumerState<AuthGate> {
       );
     }
 
-    // Si verrouillé par biométrie activée par l'utilisateur
-    if (!_isBiometricUnlocked) {
-      final isDark = Theme.of(context).brightness == Brightness.dark;
-      return Scaffold(
-        body: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 28.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const ShieldNetLogo(size: 76),
-                const SizedBox(height: 24),
-                Text(
-                  'ShieldNet Verrouillé',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? AppTheme.textPrimaryDark : AppTheme.textPrimaryLight,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Confirmez votre identité pour déverrouiller vos protections.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondaryLight,
-                  ),
-                ),
-                const SizedBox(height: 32),
-                ElevatedButton.icon(
-                  onPressed: _checkBiometricRequirement,
-                  icon: const Icon(Icons.fingerprint_rounded, size: 24),
-                  label: const Text('Déverrouiller avec Face ID / Empreinte'),
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 50),
-                    backgroundColor: AppTheme.primaryColor,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+    // 3. Si la session est verrouillée (absence > 5 min) ou que la biométrie est requise
+    if (_sessionTimeout.isLocked || !_isBiometricUnlocked) {
+      return SessionLockScreen(
+        user: user,
+        onUnlocked: () {
+          if (mounted) {
+            setState(() {
+              _isBiometricUnlocked = true;
+            });
+          }
+        },
       );
     }
 
-    // 3. Accès autorisé
+    // 4. Accès autorisé
     return widget.child;
   }
 }

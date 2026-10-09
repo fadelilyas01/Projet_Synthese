@@ -1547,6 +1547,11 @@ class VerifyEmailOTPView(APIView):
             UserProfile.objects.get_or_create(user=user)
             send_welcome_confirmation_email(user)
 
+        new_password = request.data.get('new_password', '').strip()
+        if user and new_password:
+            user.set_password(new_password)
+            user.save()
+
         refresh = RefreshToken.for_user(user)
         return Response({
             'user': UserSerializer(user).data,

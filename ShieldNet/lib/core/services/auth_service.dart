@@ -240,6 +240,64 @@ class AuthService {
     }
   }
 
+  /// Envoie un code OTP à 6 chiffres par courriel pour la réinitialisation de mot de passe
+  Future<String> sendPasswordResetOtp(String email) async {
+    try {
+      final response = await _dio.post(
+        'auth/email/send-otp/',
+        data: {'email': email.trim().toLowerCase()},
+      );
+      if (response.statusCode == 200 && response.data != null) {
+        final data = response.data as Map<String, dynamic>;
+        return data['detail'] as String? ?? 'Code de vérification envoyé.';
+      }
+      throw Exception("Réponse invalide du serveur");
+    } on DioException catch (e) {
+      if (e.type == DioExceptionType.connectionError || e.type == DioExceptionType.connectionTimeout) {
+        throw Exception("Impossible de contacter le serveur ShieldNet. Vérifiez votre connexion.");
+      }
+      final detail = e.response?.data?['detail'];
+      throw Exception(detail ?? "Échec de l'envoi du code de réinitialisation.");
+    }
+  }
+
+  /// Vérifie le code OTP et enregistre le nouveau mot de passe
+  Future<UserModel> resetPasswordWithOtp({
+    required String email,
+    required String code,
+    required String newPassword,
+  }) async {
+    try {
+      final response = await _dio.post(
+        'auth/email/verify-otp/',
+        data: {
+          'email': email.trim().toLowerCase(),
+          'code': code.trim(),
+          'new_password': newPassword,
+        },
+      );
+
+      if (response.statusCode == 200 && response.data != null) {
+        final data = response.data as Map<String, dynamic>;
+        final user = UserModel.fromJson(data['user'] as Map<String, dynamic>);
+        final tokens = data['tokens'] as Map<String, dynamic>;
+
+        await _storage.write(key: _kAccessToken, value: tokens['access'] as String);
+        await _storage.write(key: _kRefreshToken, value: tokens['refresh'] as String);
+        await _storage.write(key: _kUserData, value: jsonEncode(user.toJson()));
+
+        return user;
+      }
+      throw Exception("Échec de la réinitialisation du mot de passe.");
+    } on DioException catch (e) {
+      if (e.type == DioExceptionType.connectionError || e.type == DioExceptionType.connectionTimeout) {
+        throw Exception("Impossible de contacter le serveur ShieldNet.");
+      }
+      final detail = e.response?.data?['detail'];
+      throw Exception(detail ?? "Code invalide ou expiré.");
+    }
+  }
+
   /// Déconnexion
   Future<void> logout() async {
     await _storage.delete(key: _kAccessToken);

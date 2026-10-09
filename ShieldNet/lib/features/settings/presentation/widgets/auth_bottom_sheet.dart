@@ -6,6 +6,7 @@ import '../../../../core/services/google_sign_in_service.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/google_sign_in_button.dart';
 import '../../../../core/widgets/biometric_enrollment_sheet.dart';
+import '../../../../core/widgets/forgot_password_sheet.dart';
 import '../pages/admin_console_page.dart';
 
 /// Boîte de dialogue et modale d'authentification unifiée (Utilisateurs & Administrateurs)
@@ -442,7 +443,27 @@ class _AuthBottomSheetState extends ConsumerState<AuthBottomSheet> {
               ),
             ),
 
-            const SizedBox(height: 20),
+            if (_isLogin) ...[
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () {
+                    ForgotPasswordSheet.show(
+                      context,
+                      initialEmail: _emailController.text.trim(),
+                    );
+                  },
+                  child: Text(
+                    isEn ? 'Forgot password?' : 'Mot de passe oublié ?',
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ),
+            ] else ...[
+              const SizedBox(height: 16),
+            ],
+
+            const SizedBox(height: 8),
 
             // Bouton Principal de Soumission
             ElevatedButton(

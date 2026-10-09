@@ -57,6 +57,23 @@ class AuthNotifier extends StateNotifier<UserModel?> {
     state = user;
   }
 
+  Future<String> sendPasswordResetOtp(String email) async {
+    return await _authService.sendPasswordResetOtp(email);
+  }
+
+  Future<void> resetPasswordWithOtp({
+    required String email,
+    required String code,
+    required String newPassword,
+  }) async {
+    final user = await _authService.resetPasswordWithOtp(
+      email: email,
+      code: code,
+      newPassword: newPassword,
+    );
+    state = user;
+  }
+
   Future<void> logout() async {
     await _authService.logout();
     state = null;

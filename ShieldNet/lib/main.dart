@@ -19,6 +19,7 @@ import 'features/settings/presentation/pages/settings_page.dart';
 import 'features/onboarding/presentation/pages/onboarding_page.dart';
 
 import 'core/services/background_sync_service.dart';
+import 'core/services/session_timeout_service.dart';
 
 import 'core/widgets/auth_gate.dart';
 
@@ -58,6 +59,13 @@ void main() async {
     await BackgroundSyncService.instance.initialize();
   } catch (e) {
     AppLogger.log("BackgroundSync init exception: $e");
+  }
+
+  // Initialisation du gestionnaire de session et de verrouillage automatique après 5 minutes
+  try {
+    await SessionTimeoutService.instance.initialize();
+  } catch (e) {
+    AppLogger.log("[Main] Erreur init SessionTimeoutService: $e");
   }
 
   // Tente une actualisation discrète de la liste noire au démarrage si l'option est active
