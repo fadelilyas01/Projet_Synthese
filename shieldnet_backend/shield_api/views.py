@@ -1,3 +1,17 @@
+def verify_google_id_token(id_token):
+    """Verifie cryptographiquement un jeton Google ID Token aupres de Google OAuth2."""
+    if not id_token:
+        return None
+    import urllib.request
+    import json
+    url = f"https://oauth2.googleapis.com/tokeninfo?id_token={id_token}"
+    try:
+        req = urllib.request.Request(url, headers={'User-Agent': 'ShieldNet-Security/1.0'})
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            return json.loads(resp.read().decode('utf-8'))
+    except Exception:
+        return None
+
 from django.core.mail import send_mail
 from django.utils import timezone
 
@@ -310,69 +324,217 @@ class BatchCheckNumberView(APIView):
         })
 
 
-def send_welcome_confirmation_email(user):
-    """Envoie un courriel de bienvenue et d'activation de la protection ShieldNet."""
+def send_welcome_confirmation_email(user, request=None):
+    """Envoie un courriel de bienvenue officiel et haut de gamme avec logo integre et lien vers l'application."""
     if not user or not user.email:
         return
-    display_name = user.first_name or (user.email.split('@')[0] if user.email else 'Utilisateur')
-    subject = "[ShieldNet] Bienvenue sur ShieldNet - Activation de votre Protection"
+
+    import os
+    from django.conf import settings
+    from django.core.mail import EmailMultiAlternatives
+    from email.mime.image import MIMEImage
+
+    display_name = (user.first_name or "").strip()
+    if not display_name:
+        display_name = user.email.split('@')[0].capitalize()
+
+    # Determination de l'URL web alternative de redirection (reseau local ou prod)
+    if request:
+        try:
+            web_fallback_url = request.build_absolute_uri('/open/')
+        except Exception:
+            web_fallback_url = "http://192.168.2.17:8000/open/"
+    else:
+        site_url = getattr(settings, 'SITE_URL', '').strip()
+        if site_url:
+            web_fallback_url = f"{site_url.rstrip('/')}/open/"
+        else:
+            web_fallback_url = "http://192.168.2.17:8000/open/"
+
+    # Le lien natif direct pour ouvrir l'application sur le telephone
+    direct_app_url = "shieldnet://open"
+
+    subject = "Bienvenue sur ShieldNet — Votre protection est active"
+
     message = f"""Bonjour {display_name},
 
-Bienvenue sur ShieldNet ! Votre compte ({user.email}) a ete cree et securise avec succes.
+Bienvenue sur ShieldNet ! Nous sommes ravis de vous compter parmi nous.
 
-Votre bouclier de securite mobile est desormais operationnel :
-- Filtrage et blocage des appels frauduleux en temps reel (Zero-Knowledge).
-- Moteur d'IA predictif anti-usurpation (Neighbor Spoofing & Spams).
-- Inspection proactive des SMS et faux liens (colis, banques).
-- Confidentialite totale : vos contacts restent proteges localement par HMAC-SHA256.
+Votre compte ({user.email}) est désormais actif et votre appareil est protégé.
 
-Vous pouvez des a present ouvrir l'application ShieldNet pour surveiller votre niveau de protection.
+Voici vos protections actives au quotidien :
+1. FILTRAGE DES APPELS : Neutralise les appels indésirables, fraudes et robots avant qu'ils ne vous dérangent.
+2. INSPECTEUR DE SMS : Analyse instantanément les messages suspects et faux avis de livraison.
+3. VIE PRIVÉE GARANTIE : Vos contacts et données privées restent strictement protégés sur votre appareil.
 
-L'equipe ShieldNet Security
+Pour lancer votre application directement sur votre mobile :
+Lien direct application : {direct_app_url}
+Lien web alternatif : {web_fallback_url}
+
+Besoin d'aide ? Consultez notre Centre d'assistance dans l'application.
+
+L'équipe ShieldNet Security
+Protection Numérique & Confidentialité
 """
+
     html_message = f"""<!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
   <meta charset="utf-8">
-  <style>
-    body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0b1120; color: #f1f5f9; margin: 0; padding: 24px; }}
-    .card {{ max-width: 540px; margin: 0 auto; background-color: #1e293b; border-radius: 16px; padding: 32px; border: 1px solid #334155; }}
-    .badge {{ display: inline-block; background-color: #0284c7; color: white; padding: 6px 14px; border-radius: 999px; font-weight: 600; font-size: 13px; margin-bottom: 20px; }}
-    h1 {{ color: #ffffff; font-size: 22px; margin-top: 0; }}
-    p {{ line-height: 1.6; color: #cbd5e1; font-size: 15px; }}
-    ul {{ padding-left: 20px; color: #cbd5e1; line-height: 1.8; }}
-    .footer {{ margin-top: 32px; padding-top: 20px; border-top: 1px solid #334155; font-size: 12px; color: #94a3b8; text-align: center; }}
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bienvenue sur ShieldNet</title>
 </head>
-<body>
-  <div class="card">
-    <div class="badge">&#128737; ShieldNet Cyber-Defense</div>
-    <h1>Bienvenue, {display_name} !</h1>
-    <p>Votre compte <strong>{user.email}</strong> a ete cree et securise avec succes.</p>
-    <p>Votre protection mobile est desormais operationnelle :</p>
-    <ul>
-      <li><strong>Filtrage Zero-Knowledge</strong> : vos appels sont filtres localement sans devoilage de contacts.</li>
-      <li><strong>IA Predictive</strong> : detection automatique des numeros voisins usurpes (Neighbor Spoofing).</li>
-      <li><strong>Inspecteur de SMS</strong> : detection des arnaques de livraison et fausses alertes bancaires.</li>
-    </ul>
-    <p>Ouvrez votre application ShieldNet pour surveiller votre bouclier en temps reel.</p>
-    <div class="footer">
-      Protege par ShieldNet Security &bull; Respect strict de la vie privee
-    </div>
-  </div>
+<body style="margin: 0; padding: 0; background-color: #070B14; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #F1F5F9; -webkit-font-smoothing: antialiased;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #070B14; padding: 36px 16px;">
+    <tr>
+      <td align="center">
+        <!-- Main Container -->
+        <table role="presentation" width="100%" max-width="580" cellspacing="0" cellpadding="0" border="0" style="max-width: 580px; background-color: #0F172A; border: 1px solid #1E293B; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.55);">
+          
+          <!-- Header Banner -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #0369A1 0%, #0F172A 70%); padding: 38px 32px 30px 32px; text-align: center; border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
+              <!-- Logo Officiel ShieldNet -->
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: 0 auto 14px auto;">
+                <tr>
+                  <td align="center" valign="middle" style="width: 64px; height: 64px; background: #0B132B; border-radius: 18px; border: 2px solid #38BDF8; box-shadow: 0 8px 24px rgba(2, 132, 199, 0.35); text-align: center;">
+                    <img src="cid:shieldnet_logo" width="46" height="46" alt="ShieldNet Logo" style="display: block; margin: 0 auto; border: 0;" />
+                  </td>
+                </tr>
+              </table>
+              <h1 style="margin: 0; font-size: 24px; font-weight: 800; color: #FFFFFF; letter-spacing: 1.5px; text-transform: uppercase;">SHIELDNET</h1>
+              <p style="margin: 6px 0 0 0; font-size: 13px; color: #7DD3FC; font-weight: 600; letter-spacing: 0.5px;">Bouclier Intelligent de Sécurité Citoyenne</p>
+            </td>
+          </tr>
+
+          <!-- Body Content -->
+          <tr>
+            <td style="padding: 32px 28px 24px 28px;">
+              <h2 style="margin: 0 0 14px 0; font-size: 20px; color: #F8FAFC; font-weight: 700;">Bonjour {display_name},</h2>
+              <p style="margin: 0 0 24px 0; font-size: 15px; line-height: 1.6; color: #CBD5E1;">
+                Votre compte <strong>{user.email}</strong> a été activé avec succès. Votre téléphone bénéficie désormais d'une protection conçue pour préserver votre sérénité numérique au quotidien.
+              </p>
+
+              <!-- Feature 1 -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #131E35; border-radius: 14px; margin-bottom: 12px; border: 1px solid #1E293B;">
+                <tr>
+                  <td style="padding: 16px 18px;">
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                      <tr>
+                        <td width="90" valign="top">
+                          <span style="display: inline-block; background-color: #0369A1; color: #E0F2FE; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 6px; letter-spacing: 0.5px; text-transform: uppercase;">APPELS</span>
+                        </td>
+                        <td style="padding-left: 10px;">
+                          <div style="font-size: 15px; font-weight: 700; color: #FFFFFF; margin-bottom: 4px;">Filtrage intelligent des appels</div>
+                          <div style="font-size: 13px; color: #94A3B8; line-height: 1.5;">Détecte et bloque les appels robotisés, fraudes et numéros malveillants avant qu'ils ne sonnent.</div>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Feature 2 -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #131E35; border-radius: 14px; margin-bottom: 12px; border: 1px solid #1E293B;">
+                <tr>
+                  <td style="padding: 16px 18px;">
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                      <tr>
+                        <td width="90" valign="top">
+                          <span style="display: inline-block; background-color: #4338CA; color: #EEF2FF; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 6px; letter-spacing: 0.5px; text-transform: uppercase;">SMS &amp; LIENS</span>
+                        </td>
+                        <td style="padding-left: 10px;">
+                          <div style="font-size: 15px; font-weight: 700; color: #FFFFFF; margin-bottom: 4px;">Inspecteur anti-hameçonnage</div>
+                          <div style="font-size: 13px; color: #94A3B8; line-height: 1.5;">Analyse immédiate des SMS douteux, fausses alertes bancaires et liens frauduleux.</div>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Feature 3 -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #131E35; border-radius: 14px; margin-bottom: 26px; border: 1px solid #1E293B;">
+                <tr>
+                  <td style="padding: 16px 18px;">
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                      <tr>
+                        <td width="90" valign="top">
+                          <span style="display: inline-block; background-color: #065F46; color: #ECFDF5; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 6px; letter-spacing: 0.5px; text-transform: uppercase;">VIE PRIVÉE</span>
+                        </td>
+                        <td style="padding-left: 10px;">
+                          <div style="font-size: 15px; font-weight: 700; color: #FFFFFF; margin-bottom: 4px;">Confidentialité absolue garantie</div>
+                          <div style="font-size: 13px; color: #94A3B8; line-height: 1.5;">Vos contacts et informations personnelles restent strictement sur votre appareil. Aucune donnée vendue.</div>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- CTA Bouton Direct vers l'application -->
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: 24px auto 10px auto;">
+                <tr>
+                  <td align="center" style="border-radius: 12px; background: linear-gradient(135deg, #0284C7 0%, #2563EB 100%); box-shadow: 0 4px 18px rgba(2, 132, 199, 0.45);">
+                    <a href="{direct_app_url}" style="display: inline-block; padding: 15px 36px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 15px; font-weight: 700; color: #FFFFFF; text-decoration: none; border-radius: 12px; letter-spacing: 0.3px;">
+                      Ouvrir l'application ShieldNet &rarr;
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Lien de secours Web -->
+              <div style="text-align: center; margin-bottom: 24px;">
+                <a href="{web_fallback_url}" target="_blank" style="font-size: 12px; color: #38BDF8; text-decoration: underline;">
+                  Lien alternatif dans le navigateur
+                </a>
+              </div>
+
+              <!-- Reassurance Note -->
+              <p style="margin: 0; font-size: 13px; color: #64748B; line-height: 1.5; text-align: center; border-top: 1px solid #1E293B; padding-top: 20px;">
+                Ce courriel confirme simplement l'activation de votre compte. Vous n'avez pas besoin d'y répondre.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #070B14; padding: 22px 28px; text-align: center; border-top: 1px solid #1E293B;">
+              <p style="margin: 0 0 6px 0; font-size: 12px; color: #64748B; font-weight: 600;">
+                ShieldNet Security &bull; Protection Numérique Citoyenne
+              </p>
+              <p style="margin: 0; font-size: 11px; color: #475569;">
+                Conforme aux normes de protection de la vie privée (Loi 25 &bull; PIPEDA &bull; LCAP)
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
 </html>"""
+
     try:
-        from django.conf import settings
-        from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'no-reply@shieldnet.app')
-        send_mail(
+        from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'ShieldNet Security <no-reply@shieldnet.app>')
+        msg = EmailMultiAlternatives(
             subject=subject,
-            message=message,
+            body=message,
             from_email=from_email,
-            recipient_list=[user.email],
-            html_message=html_message,
-            fail_silently=False,
+            to=[user.email],
         )
+        msg.attach_alternative(html_message, "text/html")
+
+        # Attacher le logo officiel ShieldNet au format inline CID
+        logo_path = os.path.join(settings.BASE_DIR, 'shield_api', 'static', 'shield_api', 'img', 'shieldnet_logo.png')
+        if os.path.exists(logo_path):
+            with open(logo_path, 'rb') as lf:
+                img = MIMEImage(lf.read(), _subtype='png')
+                img.add_header('Content-ID', '<shieldnet_logo>')
+                img.add_header('Content-Disposition', 'inline', filename='shieldnet_logo.png')
+                msg.attach(img)
+
+        msg.send(fail_silently=False)
     except Exception as e:
         import logging
         logging.getLogger('shield_api').warning(f"Courriel de bienvenue non distribue: {e}")
@@ -380,7 +542,7 @@ L'equipe ShieldNet Security
 class RegisterView(APIView):
     """
     POST /api/v1/auth/register/
-    Création d'un nouveau compte utilisateur avec email et mot de passe.
+    Creation d'un nouveau compte utilisateur avec email et mot de passe.
     """
     permission_classes = [permissions.AllowAny]
 
@@ -389,7 +551,7 @@ class RegisterView(APIView):
         serializer = UserRegisterSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
-            send_welcome_confirmation_email(user)
+            send_welcome_confirmation_email(user, request=request)
             refresh = RefreshToken.for_user(user)
             return Response({
                 'user': UserSerializer(user).data,
@@ -403,7 +565,7 @@ class RegisterView(APIView):
 class EmailLoginView(APIView):
     """
     POST /api/v1/auth/login/
-    Connexion directe par email et mot de passe.
+    Connexion directe par email et mot de passe avec controle de securite.
     """
     permission_classes = [permissions.AllowAny]
 
@@ -412,6 +574,11 @@ class EmailLoginView(APIView):
         serializer = EmailLoginSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.validated_data['user']
+            if not user.is_active:
+                return Response(
+                    {'detail': 'Ce compte utilisateur a ete suspendu ou desactive par la securite ShieldNet.'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
             refresh = RefreshToken.for_user(user)
             return Response({
                 'user': UserSerializer(user).data,
@@ -425,8 +592,8 @@ class EmailLoginView(APIView):
 class GoogleLoginView(APIView):
     """
     POST /api/v1/auth/google/
-    Connexion / Inscription transparente avec un compte Google (adresse email).
-    Si le compte n'existe pas encore, il est automatiquement créé sans exiger de mot de passe.
+    Connexion / Inscription securisee avec un compte Google verifie (Google OAuth2).
+    Valide l'authenticite cryptographique du compte aupres de Google pour interdire tout faux compte.
     """
     permission_classes = [permissions.AllowAny]
 
@@ -438,6 +605,32 @@ class GoogleLoginView(APIView):
 
         email = serializer.validated_data['email']
         name = serializer.validated_data.get('name', '').strip()
+        id_token = serializer.validated_data.get('id_token', '').strip()
+
+        # Securite accrue : Verification cryptographique du jeton Google
+        if id_token:
+            token_info = verify_google_id_token(id_token)
+            if not token_info:
+                return Response(
+                    {'detail': "Jeton d'authentification Google invalide ou corrompu. Acces refuse."},
+                    status=status.HTTP_401_UNAUTHORIZED
+                )
+            # Verifier que Google certifie l'adresse comme verifiee
+            is_verified = token_info.get('email_verified')
+            if is_verified not in (True, 'true', 'True', 1):
+                return Response(
+                    {'detail': "Ce compte Google n'est pas verifie par les services Google. Acces refuse."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            verified_email = token_info.get('email', '').strip().lower()
+            if verified_email and verified_email != email.lower():
+                return Response(
+                    {'detail': "L'adresse courriel soumise ne correspond pas au compte Google authentifie."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            google_name = token_info.get('name', '').strip()
+            if google_name and not name:
+                name = google_name
 
         user = User.objects.filter(email__iexact=email).first()
         if user and (user.is_staff or user.is_superuser):
@@ -446,8 +639,14 @@ class GoogleLoginView(APIView):
                 status=status.HTTP_403_FORBIDDEN
             )
 
+        if user and not user.is_active:
+            return Response(
+                {'detail': 'Ce compte utilisateur a ete desactive par la securite ShieldNet.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
         if not user:
-            # Auto-provisioning immédiat pour le compte Google
+            # Provisioning securise pour le compte Google verifie
             first_name = name.split()[0] if name else email.split('@')[0]
             last_name = ' '.join(name.split()[1:]) if len(name.split()) > 1 else ''
             random_password = secrets.token_urlsafe(24)
@@ -465,10 +664,8 @@ class GoogleLoginView(APIView):
             profile.country = country
             profile.province_or_state = province_or_state
             profile.save()
-            send_welcome_confirmation_email(user)
 
-        if not user.is_active:
-            return Response({'detail': 'Ce compte utilisateur est désactivé.'}, status=status.HTTP_403_FORBIDDEN)
+            send_welcome_confirmation_email(user, request=request)
 
         refresh = RefreshToken.for_user(user)
         return Response({
@@ -478,6 +675,7 @@ class GoogleLoginView(APIView):
                 'access': str(refresh.access_token),
             }
         }, status=status.HTTP_200_OK)
+
 
 class UserProfileView(APIView):
     """

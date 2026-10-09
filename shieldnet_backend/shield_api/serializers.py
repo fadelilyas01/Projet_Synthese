@@ -1,3 +1,28 @@
+
+DISPOSABLE_EMAIL_DOMAINS = {
+    'mailinator.com', 'guerrillamail.com', '10minutemail.com', 'tempmail.com',
+    'temp-mail.org', 'throwawaymail.com', 'fakeinbox.com', 'yopmail.com',
+    'getairmail.com', 'dispostable.com', 'sharklasers.com', 'trashmail.com',
+    'nada.ltd', 'mohmal.com', 'burnermail.io', 'inboxkitten.com',
+    'mytemp.email', 'crazymailing.com', 'zillamail.com', 'generator.email',
+    'sharklasers.com', 'guerrillamailblock.com', 'pokemail.net'
+}
+
+def validate_secure_email(email_str):
+    email_clean = email_str.strip().lower()
+    if '@' not in email_clean:
+        raise serializers.ValidationError("Adresse courriel invalide.")
+    domain = email_clean.split('@')[-1]
+    if domain in DISPOSABLE_EMAIL_DOMAINS:
+        raise serializers.ValidationError("Les adresses courriel temporaires ou jetables sont strictement interdites sur ShieldNet pour des raisons de sécurité.")
+    if domain == 'gmail.com':
+        username = email_clean.split('@')[0]
+        # Suppression des points pour le contrôle Gmail
+        pure_user = username.replace('.', '')
+        if len(pure_user) < 6:
+            raise serializers.ValidationError("L'adresse Gmail doit comporter au moins 6 caractères avant le @.")
+    return email_clean
+
 import re
 from rest_framework import serializers
 from .models import BlacklistedNumber, SpamReport, SafeReport, SafeReasonChoices, AuditLog
@@ -155,7 +180,7 @@ class UserRegisterSerializer(serializers.Serializer):
     province_or_state = serializers.CharField(max_length=50, required=False, default='QC')
 
     def validate_email(self, value):
-        email_clean = value.strip().lower()
+        email_clean = validate_secure_email(value)
         if User.objects.filter(email__iexact=email_clean).exists() or User.objects.filter(username__iexact=email_clean).exists():
             raise serializers.ValidationError("Cet email est déjà associé à un compte.")
         return email_clean
@@ -211,7 +236,7 @@ class GoogleLoginSerializer(serializers.Serializer):
     province_or_state = serializers.CharField(max_length=50, required=False, default='QC')
 
     def validate_email(self, value):
-        return value.strip().lower()
+        return validate_secure_email(value)
 
 class UpdateUserRegionSerializer(serializers.Serializer):
     country = serializers.ChoiceField(choices=CountryChoices.choices, required=False)

@@ -35,6 +35,9 @@ class ApiClient {
     return _workingBaseUrl ?? candidateBaseUrls.first;
   }
 
+  /// Callback appelé lorsqu'un token ou compte est révoqué/supprimé par le serveur
+  static void Function()? onUnauthorized;
+
   /// Résout la clé API d'authentification client selon la hiérarchie :
   /// 1. Paramètre de compilation --dart-define=API_KEY=...
   /// 2. Fichier d'environnement .env (variable API_KEY)
@@ -155,6 +158,13 @@ class ApiClient {
               } catch (_) {
                 // Essayer le candidat suivant
               }
+            }
+          }
+          if (err.response?.statusCode == 401) {
+            final path = err.requestOptions.path;
+            if (!path.contains('auth/login') && !path.contains('auth/google')) {
+              AppLogger.log('[ApiClient] Session révoquée ou utilisateur supprimé (401 sur $path).');
+              onUnauthorized?.call();
             }
           }
           return handler.next(err);

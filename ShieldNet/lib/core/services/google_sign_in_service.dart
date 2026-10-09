@@ -39,9 +39,19 @@ class GoogleSignInService {
       final String email = account.email;
       final String name = account.displayName ?? account.email.split('@')[0];
 
+      // Extraction du jeton d'authentification Google cryptographique (anti-usurpation)
+      String? idToken;
+      try {
+        final auth = await account.authentication;
+        idToken = auth.idToken;
+      } catch (authError) {
+        debugPrint('Google Auth token extraction info: $authError');
+      }
+
       final UserModel user = await _authService.googleLogin(
         email: email,
         name: name,
+        idToken: idToken,
       );
 
       return GoogleSignInResult(

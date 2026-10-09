@@ -2,7 +2,7 @@
 from django.urls import path, include
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
-from shield_api.public_views import help_center_view
+from shield_api.public_views import help_center_view, app_launch_view
 
 from shield_api.admin_views import (
     sandbox_check_view,
@@ -34,6 +34,8 @@ urlpatterns = [
     path('', help_center_view, name='home'),
     path('help/', help_center_view, name='help-center'),
     path('faq/', help_center_view, name='faq-center'),
+    path('open/', app_launch_view, name='app-open'),
+    path('app/', app_launch_view, name='app-launch'),
 
     # Administration Django Admin
     path('admin/', admin.site.urls),

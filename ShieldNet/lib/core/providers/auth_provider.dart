@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/auth_service.dart';
 
+import '../network/api_client.dart';
+
 final authServiceProvider = Provider<AuthService>((ref) {
   return AuthService();
 });
@@ -9,12 +11,25 @@ class AuthNotifier extends StateNotifier<UserModel?> {
   final AuthService _authService;
 
   AuthNotifier(this._authService) : super(null) {
+    ApiClient.onUnauthorized = () {
+      logout();
+    };
     checkCurrentUser();
   }
 
   Future<void> checkCurrentUser() async {
-    final user = await _authService.getCurrentUser();
-    state = user;
+    final cached = await _authService.getCurrentUser();
+    state = cached;
+
+    if (cached != null) {
+      final fresh = await _authService.fetchCurrentProfile();
+      state = fresh;
+    }
+  }
+
+  Future<void> validateSession() async {
+    final fresh = await _authService.fetchCurrentProfile();
+    state = fresh;
   }
 
   Future<void> login(String email, String password) async {

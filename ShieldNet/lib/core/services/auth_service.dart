@@ -204,14 +204,15 @@ class AuthService {
     }
   }
 
-  /// Connexion transparente avec un compte Google (adresse email)
-  Future<UserModel> googleLogin({required String email, String? name}) async {
+  /// Connexion transparente avec un compte Google (adresse email et jeton d'authentification)
+  Future<UserModel> googleLogin({required String email, String? name, String? idToken}) async {
     try {
       final response = await _dio.post(
         'auth/google/',
         data: {
           'email': email.trim().toLowerCase(),
           if (name != null && name.isNotEmpty) 'name': name.trim(),
+          if (idToken != null && idToken.isNotEmpty) 'id_token': idToken,
         },
       );
 
@@ -256,6 +257,40 @@ class AuthService {
       }
     } catch (_) {}
     return null;
+  }
+
+  /// Valide et rafraîchit le profil utilisateur directement auprès du serveur Django (/api/v1/auth/me/).
+  /// Si le compte a été supprimé ou révoqué (HTTP 401 / 403 / 404), purge la session locale et renvoie null.
+  Future<UserModel?> fetchCurrentProfile() async {
+    final token = await getAccessToken();
+    if (token == null || token.isEmpty) {
+      await logout();
+      return null;
+    }
+
+    try {
+      final response = await _dio.get(
+        'auth/me/',
+        options: Options(
+          headers: {'Authorization': 'Bearer $token'},
+        ),
+      );
+
+      if (response.statusCode == 200 && response.data != null) {
+        final user = UserModel.fromJson(response.data as Map<String, dynamic>);
+        await _storage.write(key: _kUserData, value: jsonEncode(user.toJson()));
+        return user;
+      }
+    } on DioException catch (e) {
+      final status = e.response?.statusCode;
+      if (status == 401 || status == 403 || status == 404) {
+        AppLogger.log('[AuthService] Compte utilisateur révoqué ou supprimé ($status). Déconnexion immédiate.');
+        await logout();
+        return null;
+      }
+    } catch (_) {}
+
+    return getCurrentUser();
   }
 
   /// Récupère le jeton JWT
