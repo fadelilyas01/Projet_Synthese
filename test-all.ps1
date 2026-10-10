@@ -2,7 +2,7 @@
 # ShieldNet - Script d'Execution & de Validation Globale des Tests
 # =====================================================================
 Write-Host "==========================================================" -ForegroundColor Cyan
-Write-Host "  SHIELDNET - VALIDATION GLOBALE DES TESTS (126 TESTS)    " -ForegroundColor Cyan
+Write-Host "  SHIELDNET - VALIDATION GLOBALE DES TESTS (136 TESTS)    " -ForegroundColor Cyan
 Write-Host "==========================================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -34,13 +34,13 @@ if ($analyzeExit -eq 0) {
 }
 Write-Host ""
 
-# 3. Tests Unitaires & Securite Flutter (52 tests)
-Write-Host "[3/3] Execution des tests Flutter (52 tests)..." -ForegroundColor Yellow
+# 3. Tests Unitaires & Securite Flutter (62 tests)
+Write-Host "[3/3] Execution des tests Flutter (62 tests)..." -ForegroundColor Yellow
 $flutterTestProcess = Start-Process flutter -ArgumentList "test" -WorkingDirectory $mobilePath -NoNewWindow -Wait -PassThru
 $flutterTestExit = $flutterTestProcess.ExitCode
 
 if ($flutterTestExit -eq 0) {
-    Write-Host "  -> Tests Flutter : SUCCES (52/52 tests reussis)" -ForegroundColor Green
+    Write-Host "  -> Tests Flutter : SUCCES (62/62 tests reussis)" -ForegroundColor Green
 } else {
     Write-Host "  -> Tests Flutter : ECHEC" -ForegroundColor Red
 }
@@ -49,7 +49,7 @@ Write-Host ""
 # Bilan
 Write-Host "==========================================================" -ForegroundColor Cyan
 if ($backendExit -eq 0 -and $analyzeExit -eq 0 -and $flutterTestExit -eq 0) {
-    Write-Host "  BILAN : TOUS LES 126 TESTS SONT AU VERT ! PROJET CONFORME." -ForegroundColor Green
+    Write-Host "  BILAN : TOUS LES 136 TESTS SONT AU VERT ! PROJET CONFORME." -ForegroundColor Green
 } else {
     Write-Host "  BILAN : CERTAINS TESTS ONT ECHOUE. VERIFIER LES LOGS." -ForegroundColor Red
 }

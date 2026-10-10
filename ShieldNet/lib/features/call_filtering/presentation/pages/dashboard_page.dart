@@ -25,6 +25,7 @@ import '../../../settings/presentation/pages/settings_page.dart';
 import '../../../../core/widgets/app_logo.dart';
 import '../widgets/telecom_security_tip_card.dart';
 import '../widgets/peace_of_mind_summary_card.dart';
+import 'call_screening_demo_page.dart';
 
 class DashboardPage extends ConsumerStatefulWidget {
   const DashboardPage({super.key});
@@ -618,6 +619,55 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
 
             // Raccourcis d'actions immédiates : Vérifier un numéro & Inspecteur SMS
             ActionHubRow(onVerifyNumber: () => _showQuickVerificationDialog(context)),
+            const SizedBox(height: 14),
+
+            // Espace Démonstration Jury & Conformité
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: borderColor),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.accentCyan.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.science_rounded, color: AppTheme.accentCyan, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          isEn ? 'Jury Demonstration Space' : 'Espace Démonstration Jury',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                        ),
+                        Text(
+                          isEn ? 'Native call simulation < 3ms' : 'Simulateur d\'appels < 3ms & logs natifs',
+                          style: const TextStyle(fontSize: 11, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  ),
+                  TextButton.icon(
+                    icon: const Icon(Icons.play_circle_outline_rounded, size: 16, color: AppTheme.accentCyan),
+                    label: Text(isEn ? 'Test' : 'Tester', style: const TextStyle(color: AppTheme.accentCyan, fontWeight: FontWeight.bold, fontSize: 12)),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const CallScreeningDemoPage()),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 16),
 
             // Compteurs statistiques d'activité locale & télémétrie moteur

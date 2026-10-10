@@ -112,12 +112,51 @@ class ApiClient {
     dio.interceptors.add(
       InterceptorsWrapper(
         onError: (DioException err, ErrorInterceptorHandler handler) async {
+          final statusCode = err.response?.statusCode;
           final isConnErr = err.type == DioExceptionType.connectionTimeout ||
               err.type == DioExceptionType.connectionError ||
               err.type == DioExceptionType.sendTimeout ||
               err.type == DioExceptionType.receiveTimeout;
+          final isTransientServerError = statusCode == 502 || statusCode == 503 || statusCode == 504;
 
-          if (isConnErr && err.requestOptions.extra['_hasRetried'] != true) {
+          final retryCount = (err.requestOptions.extra['_retryCount'] as int?) ?? 0;
+          const maxRetries = 2;
+
+          // 1. Stratégie de Retry avec Backoff Exponentiel sur l'hôte courant
+          if ((isConnErr || isTransientServerError) && retryCount < maxRetries) {
+            final nextRetry = retryCount + 1;
+            final delayMs = nextRetry * 500; // 500ms, 1000ms
+            AppLogger.log('[ApiClient] Erreur transitoire (${err.message ?? statusCode}), retry $nextRetry/$maxRetries après ${delayMs}ms...');
+            await Future.delayed(Duration(milliseconds: delayMs));
+
+            try {
+              final newOptions = Options(
+                method: err.requestOptions.method,
+                headers: err.requestOptions.headers,
+                responseType: err.requestOptions.responseType,
+                contentType: err.requestOptions.contentType,
+                extra: {
+                  ...err.requestOptions.extra,
+                  '_retryCount': nextRetry,
+                },
+              );
+
+              final retryResponse = await dio.request(
+                err.requestOptions.path,
+                data: err.requestOptions.data,
+                queryParameters: err.requestOptions.queryParameters,
+                options: newOptions,
+              );
+              return handler.resolve(retryResponse);
+            } catch (retryErr) {
+              if (retryErr is DioException) {
+                err = retryErr;
+              }
+            }
+          }
+
+          // 2. Basculement réseau (Fallback URLs) en cas d'échec persistant
+          if (isConnErr && err.requestOptions.extra['_hasFallbackRetried'] != true) {
             final candidates = candidateBaseUrls;
             final currentBase = dio.options.baseUrl;
 
@@ -133,7 +172,7 @@ class ApiClient {
                   contentType: err.requestOptions.contentType,
                   extra: {
                     ...err.requestOptions.extra,
-                    '_hasRetried': true,
+                    '_hasFallbackRetried': true,
                   },
                 );
 
@@ -162,6 +201,8 @@ class ApiClient {
               }
             }
           }
+
+          // 3. Gestion 401 Session révoquée
           if (err.response?.statusCode == 401) {
             final path = err.requestOptions.path;
             if (!path.contains('auth/login') && !path.contains('auth/google')) {

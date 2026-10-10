@@ -38,10 +38,11 @@ Projet synthese/
 ├── docs/                     # Documentation technique détaillée
 │   ├── ARCHITECTURE_ET_CONCEPTION.md
 │   ├── DEPLOIEMENT_ET_CI_CD.md
+│   ├── OPERATIONS_PRODUCTION_ET_MAINTENANCE.md # Guide des opérations, PRA, scalabilité et versioning
 │   └── SECURITY_AND_THREAT_MODEL.md
 │
 ├── start-dev.ps1             # Script de démarrage de l'environnement de développement
-└── test-all.ps1              # Script pour exécuter l'ensemble des 126 tests
+└── test-all.ps1              # Script pour exécuter l'ensemble des 136 tests
 ```
 
 ---
@@ -109,10 +110,10 @@ flutter run
 
 ## 4. Tests automatisés et qualité du code
 
-Le projet comprend **126 tests automatisés (100% passants)** qui valident le bon fonctionnement de l'ensemble de la solution :
+Le projet comprend **136 tests automatisés (100% passants)** qui valident le bon fonctionnement de l'ensemble de la solution :
 
-- **74 tests côté backend (Django)** : couvrent l'API REST, l'authentification JWT, les codes OTP, les calculs de consensus citoyen, le filtrage régional et la modération.
-- **52 tests côté mobile (Flutter)** : valident le filtrage d'appels, l'IA prédictive, le hachage HMAC-SHA256, la gestion de session (timeout 5 min), le stockage sécurisé et les requêtes réseau.
+- **74 tests côté backend (Django)** : couvrent l'API REST, l'authentification JWT, les codes OTP, les calculs de consensus citoyen, le filtrage régional, les métriques SOC et la modération.
+- **62 tests côté mobile (Flutter)** : valident le filtrage d'appels, l'IA prédictive, le hachage HMAC-SHA256, la gestion de session (timeout 5 min avec empreinte), l'observabilité utilisateur, le mode démo jury, le stockage sécurisé et la résilience réseau (retry & backoff).
 
 Pour exécuter tous les tests d'un seul coup :
 ```powershell

@@ -15,7 +15,7 @@ Le système ShieldNet est articulé autour de trois environnements complémentai
 Afin de faciliter la maintenance et d'éviter un couplage fort avec les bibliothèques externes, le code Flutter suit les principes de la **Clean Architecture** :
 
 ```mermaid
-graph TD
+flowchart TD
     subgraph Presentation_Layer ["Couche Présentation (lib/features/*/presentation)"]
         UI_Pages["Pages (Dashboard, Settings, SmsInspector, AdminConsole)"]
         UI_Widgets["Composants graphiques réutilisables"]
@@ -58,9 +58,12 @@ graph TD
     UseCases --> Entities
     RepoImpl -.-> RepoInterfaces
     RepoImpl --> DataSources
-    DataSources --> Core_Layer
-    Core_Layer -. Partage SQLite .-> Native_Android
-    DataSources -. Requêtes HTTPS (HMAC) .-> Backend_Django
+    DataSources --> Database
+    DataSources --> Network
+    CallScreening --> NativeDB
+    Database -.->|"Partage SQLite"| NativeDB
+    Network -.->|"Requêtes HTTPS (HMAC)"| DjangoAPI
+    DjangoAPI --> DjangoDB
 ```
 
 ### Avantages de ce découpage
@@ -95,7 +98,7 @@ flowchart TD
 
     subgraph Backend ["Serveur Backend ShieldNet"]
         subgraph Django ["API Django REST"]
-            AuthAPI["Authentification & Permissions RBAC"]
+            AuthAPI["Authentification et Permissions RBAC"]
             DeltaAPI["Synchronisation différentielle"]
             ConsensusAPI["Gestion du consensus communautaire"]
             AuditAPI["Journal d'audit administratif"]
@@ -104,18 +107,18 @@ flowchart TD
         CentralDB[("Base de données centrale")]
     end
 
-    Telecom -->|Appel entrant détecté| ScreenService
-    ScreenService -->|Vérification empreinte < 2 ms| NativeDB
-    NativeDB -->|Lecture indexée B-Tree| LocalDB
-    LocalDB  -->|Mise à jour SQLite| StateMgr
+    Telecom -->|"Appel entrant détecté"| ScreenService
+    ScreenService -->|"Vérification empreinte rapide (moins de 2 ms)"| NativeDB
+    NativeDB -->|"Lecture indexée B-Tree"| LocalDB
+    LocalDB -->|"Mise à jour SQLite"| StateMgr
     
-    UI -->|Action utilisateur| StateMgr
-    StateMgr -->|Hachage normalisé| CryptoEngine
-    OfflineQueue -->|GET /sync/delta| DeltaAPI
-    DeltaAPI -->|Lecture deltas| CentralDB
-    ConsensusAPI -->|Seuil de signalements| CentralDB
-    AuditAPI -->|Traçabilité| CentralDB
-    RepEngine -->|Calcul du score| CentralDB
+    UI -->|"Action utilisateur"| StateMgr
+    StateMgr -->|"Hachage normalisé"| CryptoEngine
+    OfflineQueue -->|"GET /sync/delta"| DeltaAPI
+    DeltaAPI -->|"Lecture deltas"| CentralDB
+    ConsensusAPI -->|"Seuil de signalements"| CentralDB
+    AuditAPI -->|"Traçabilité"| CentralDB
+    RepEngine -->|"Calcul du score"| CentralDB
 ```
 
 ---
@@ -130,9 +133,9 @@ classDiagram
     class AdminRepository {
         <<interface>>
         +getStats() Future~AdminStats~
-        +getAuditLogs(page, limit) Future~List~AuditLogEntry~~
-        +purgeInactiveEntries(days) Future~int~
-        +runConsensusAudit() Future~Map~String, dynamic~~
+        +getAuditLogs(int page, int limit) Future~List~
+        +purgeInactiveEntries(int days) Future~int~
+        +runConsensusAudit() Future~Map~
     }
 
     class AdminStats {
@@ -141,7 +144,7 @@ classDiagram
         +int activeCommunityReports
         +int totalProtectedUsers
         +DateTime lastSyncTimestamp
-        +fromMap(Map) AdminStats
+        +fromMap(Map map) AdminStats
     }
 
     class AuditLogEntry {
@@ -151,11 +154,11 @@ classDiagram
         +DateTime timestamp
         +String details
         +String ipAddress
-        +fromMap(Map) AuditLogEntry
+        +fromMap(Map map) AuditLogEntry
     }
 
     class AnalyzeSmsUseCase {
-        -SmsPhishingDetector _detector
+        -SmsPhishingDetector detector
         +call(String text) PhishingResult
         +extractUrls(String text) List~String~
     }
@@ -170,62 +173,62 @@ classDiagram
 
     %% Couche Données
     class AdminRepositoryImpl {
-        -ApiService _apiService
+        -ApiService apiService
         +getStats() Future~AdminStats~
-        +getAuditLogs(page, limit) Future~List~AuditLogEntry~~
-        +purgeInactiveEntries(days) Future~int~
-        +runConsensusAudit() Future~Map~String, dynamic~~
+        +getAuditLogs(int page, int limit) Future~List~
+        +purgeInactiveEntries(int days) Future~int~
+        +runConsensusAudit() Future~Map~
     }
 
     %% Socle Technique
     class ApiService {
-        -Dio _dio
-        -DatabaseHelper _dbHelper
-        +syncBlacklistWithBackend(delta: bool) Future~int~
-        +reportSpamNumber(hash, reason) Future~bool~
-        +submitSafeReport(hash, category, notes) Future~bool~
-        +checkNumbersBatch(hashes) Future~Map~String, dynamic~~
-        +checkNumberReputation(hash) Future~Map~
+        -Dio dio
+        -DatabaseHelper dbHelper
+        +syncBlacklistWithBackend(bool delta) Future~int~
+        +reportSpamNumber(String hash, String reason) Future~bool~
+        +submitSafeReport(String hash, String category, String notes) Future~bool~
+        +checkNumbersBatch(List hashes) Future~Map~
+        +checkNumberReputation(String hash) Future~Map~
     }
 
     class DatabaseHelper {
         <<singleton>>
-        -Database _database
+        -Database database
         +instance DatabaseHelper
-        +insertBlacklistBatch(List) Future~int~
-        +isNumberBlocked(hash) Future~bool~
-        +isEmergencyNumber(number) Future~bool~
+        +insertBlacklistBatch(List items) Future~int~
+        +isNumberBlocked(String hash) Future~bool~
+        +isEmergencyNumber(String number) Future~bool~
         +getAllEmergencyContacts() Future~List~
     }
 
     class CryptoUtils {
-        <<utilitaire>>
-        +normalizePhoneNumber(raw) String
-        +computeHmacSha256(phone, salt) String
-        +maskPhoneNumber(phone) String
+        <<utility>>
+        +normalizePhoneNumber(String raw) String
+        +computeHmacSha256(String phone, String salt) String
+        +maskPhoneNumber(String phone) String
     }
 
     %% Composants Android Natifs
     class ShieldNetCallScreeningService {
-        +onScreenCall(CallDetails) void
-        -evaluateIncomingCall(number) CallResponse
+        +onScreenCall(CallDetails details) void
+        -evaluateIncomingCall(String number) CallResponse
     }
 
     class ShieldNetDatabaseHelper {
-        +isNumberBlocked(hash) Boolean
-        +isEmergencyNumber(rawNumber) Boolean
+        +isNumberBlocked(String hash) Boolean
+        +isEmergencyNumber(String rawNumber) Boolean
     }
 
     %% Relations
-    AdminRepository <|.. AdminRepositoryImpl : implémente
-    AdminRepositoryImpl --> ApiService : utilise
-    AdminRepository --> AdminStats : renvoie
-    AdminRepository --> AuditLogEntry : renvoie
-    AnalyzeSmsUseCase --> PhishingResult : renvoie
-    ApiService --> DatabaseHelper : synchronise
-    ApiService --> CryptoUtils : calcule les empreintes
-    ShieldNetCallScreeningService --> ShieldNetDatabaseHelper : consulte
-    ShieldNetDatabaseHelper ..> DatabaseHelper : partage shieldnet.db
+    AdminRepository <|.. AdminRepositoryImpl : implements
+    AdminRepositoryImpl --> ApiService : uses
+    AdminRepository --> AdminStats : returns
+    AdminRepository --> AuditLogEntry : returns
+    AnalyzeSmsUseCase --> PhishingResult : returns
+    ApiService --> DatabaseHelper : syncs
+    ApiService --> CryptoUtils : hashes
+    ShieldNetCallScreeningService --> ShieldNetDatabaseHelper : queries
+    ShieldNetDatabaseHelper ..> DatabaseHelper : shares_db
 ```
 
 ---
@@ -253,16 +256,16 @@ Lorsqu'un appel arrive, le système Android transmet le numéro au service d'int
 sequenceDiagram
     autonumber
     actor Appelant as Appelant
-    participant AndroidOS as Téléphonie Android
-    participant NativeService as ShieldNetCallScreeningService (Kotlin)
-    participant NativeDB as Base SQLite locale (shieldnet.db)
+    participant AndroidOS as "Téléphonie Android"
+    participant NativeService as "ShieldNetCallScreeningService (Kotlin)"
+    participant NativeDB as "Base SQLite locale (shieldnet.db)"
     actor Utilisateur as Destinataire
 
     Appelant->>AndroidOS: Appel entrant (+1 514-555-0199)
     AndroidOS->>NativeService: onScreenCall(callDetails)
     
     %% Contrôle de priorité absolue : urgences
-    Note over NativeService,NativeDB: Vérification immédiate d'immunité (911, 811, 988, contacts favoris)
+    Note over NativeService,NativeDB: Vérification immédiate d'immunité (911, 811, 988, favoris)
     NativeService->>NativeDB: isEmergencyNumber(rawNumber)
     alt Numéro d'urgence ou contact prioritaire
         NativeDB-->>NativeService: Oui
@@ -272,18 +275,18 @@ sequenceDiagram
         NativeDB-->>NativeService: Non
         
         %% Hachage et consultation de la liste
-        Note over NativeService: Normalisation E.164 + HMAC-SHA256 (< 0.2 ms)
+        Note over NativeService: Normalisation E.164 + HMAC-SHA256 (moins de 0.2 ms)
         NativeService->>NativeDB: isNumberBlocked(phoneHash)
         
         alt Numéro présent dans la liste de blocage
             NativeDB-->>NativeService: Oui (numéro indésirable)
             NativeService->>AndroidOS: respondToCall(DISALLOW, rejet silencieux)
-            Note over AndroidOS: Appel bloqué sans faire sonner le téléphone (< 2 ms)
+            Note over AndroidOS: Appel bloqué sans sonnerie (moins de 2 ms)
             NativeService->>NativeDB: logBlockedCallEvent(phoneHash, date)
         else Numéro absent de la liste
             NativeDB-->>NativeService: Non
             
-            alt Mode "Contacts uniquement" activé et numéro inconnu
+            alt Mode Contacts uniquement activé et numéro inconnu
                 NativeService->>AndroidOS: respondToCall(SILENCE, renvoi messagerie)
             else Mode normal
                 NativeService->>AndroidOS: respondToCall(ALLOW)
@@ -301,19 +304,19 @@ Pour économiser la bande passante mobile et la batterie, le client ne télécha
 ```mermaid
 sequenceDiagram
     autonumber
-    participant Scheduler as Tâche d'arrière-plan (WorkManager)
-    participant SyncService as BackgroundSyncService
-    participant ApiService as Client HTTP Dio
-    participant DjangoAPI as API Backend (/api/v1/sync/delta)
-    participant LocalDB as Base SQLite locale
+    participant Scheduler as "Tâche d'arrière-plan (WorkManager)"
+    participant SyncService as "BackgroundSyncService"
+    participant ApiService as "Client HTTP Dio"
+    participant DjangoAPI as "API Backend (/api/v1/sync/delta)"
+    participant LocalDB as "Base SQLite locale"
 
     Scheduler->>SyncService: Déclenchement planifié
-    SyncService->>LocalDB: Récupération de la version locale (sync_version)
+    SyncService->>LocalDB: Récupération version locale (sync_version)
     LocalDB-->>SyncService: version = 142
     
-    SyncService->>ApiService: syncDelta(since_version: 142)
+    SyncService->>ApiService: syncDelta(since_version = 142)
     ApiService->>DjangoAPI: GET /api/v1/sync/delta?since_version=142
-    DjangoAPI-->>ApiService: 200 OK { new_version: 145, active: [h1, h2], removed: [h3] }
+    DjangoAPI-->>ApiService: 200 OK (new_version: 145, active: [h1, h2], removed: [h3])
     
     Note over ApiService,LocalDB: Transaction SQLite locale
     ApiService->>LocalDB: Début de transaction
@@ -335,23 +338,23 @@ L'utilisateur peut coller un message douteux pour obtenir une évaluation imméd
 sequenceDiagram
     autonumber
     actor Utilisateur as Utilisateur
-    participant UI as Page SmsInspector
-    participant UseCase as AnalyzeSmsUseCase
-    participant Detector as SmsPhishingDetector (Heuristique)
-    participant ApiService as Client HTTP
-    participant Backend as API Django
+    participant UI as "Page SmsInspector"
+    participant UseCase as "AnalyzeSmsUseCase"
+    participant Detector as "SmsPhishingDetector (Heuristique)"
+    participant ApiService as "Client HTTP"
+    participant Backend as "API Django"
 
     Utilisateur->>UI: Coller le SMS et lancer l'analyse
     UI->>UseCase: call(smsText)
     
     UseCase->>Detector: analyzeText(smsText)
-    Note over Detector: Recherche de motifs (urgence financière, faux colis, usurpation)
+    Note over Detector: Recherche de motifs (urgence, faux colis, usurpation)
     Detector-->>UseCase: Résultat local (score de risque, URL détectée)
     
     opt Si une URL est présente dans le texte et le réseau disponible
         UseCase->>ApiService: checkUrlReputation(url)
         ApiService->>Backend: POST /api/v1/check-url/
-        Backend-->>ApiService: { is_malicious: true, category: "PHISHING" }
+        Backend-->>ApiService: Confirmation menace (is_malicious: true, category: PHISHING)
         ApiService-->>UseCase: Confirmation de menace
     end
     
@@ -368,28 +371,28 @@ Le modèle collaboratif permet aux utilisateurs de signaler les numéros indési
 sequenceDiagram
     autonumber
     actor Utilisateur as Utilisateur
-    participant App as Application ShieldNet
-    participant Crypto as Module HMAC-SHA256
-    participant Backend as API Django (/api/v1/reports/)
-    participant Consensus as Moteur de consensus
-    participant Admin as Interface de modération
+    participant App as "Application ShieldNet"
+    participant Crypto as "Module HMAC-SHA256"
+    participant Backend as "API Django (/api/v1/reports/)"
+    participant Consensus as "Moteur de consensus"
+    participant Admin as "Interface de modération"
 
     Utilisateur->>App: Signalement de spam ou contestation légitime
     App->>Crypto: Calcul de l'empreinte normalisée avec sel
     Crypto-->>App: Hash HMAC-SHA256 (aucun numéro transmis en clair)
     
     alt Cas d'un signalement de spam
-        App->>Backend: POST /api/v1/reports/ { phone_hash: h, category: "FRAUD" }
+        App->>Backend: POST /api/v1/reports/ (phone_hash: h, category: FRAUD)
         Backend-->>App: Signalement enregistré
         
         Consensus->>Consensus: Vérification du seuil (utilisateurs distincts)
-        alt Seuil atteint (>= 3 signalements indépendants)
+        alt Seuil atteint (au moins 3 signalements indépendants)
             Consensus->>Backend: Ajout en liste de blocage et traçabilité dans l'AuditLog
         else Seuil non atteint
             Consensus->>Backend: Conservation en surveillance
         end
     else Cas d'une contestation (numéro légitime signalé par erreur)
-        App->>Backend: POST /api/v1/reports/safe/ { phone_hash: h, category: "HEALTH" }
+        App->>Backend: POST /api/v1/reports/safe/ (phone_hash: h, category: HEALTH)
         Consensus->>Consensus: Évaluation du ratio contestations / signalements
         Consensus->>Backend: Réhabilitation du numéro (retrait du blocage)
         Consensus->>Backend: Journalisation de l'action dans l'AuditLog

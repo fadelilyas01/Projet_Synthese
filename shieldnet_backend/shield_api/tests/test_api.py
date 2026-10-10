@@ -146,6 +146,11 @@ class ShieldApiEndpointsTest(APITestCase):
         self.assertIn('total_blacklisted', resp_admin.data)
         self.assertIn('total_blocked', resp_admin.data)
         self.assertIn('recent_reports', resp_admin.data)
+        self.assertIn('active_users', resp_admin.data)
+        self.assertIn('filtered_calls_count', resp_admin.data)
+        self.assertIn('false_positives_prevented', resp_admin.data)
+        self.assertIn('daily_trends', resp_admin.data)
+        self.assertIn('fraud_categories', resp_admin.data)
 
         # Action de modération : réhabilitation explicite d'un numéro
         mod_url = reverse('admin-moderate')

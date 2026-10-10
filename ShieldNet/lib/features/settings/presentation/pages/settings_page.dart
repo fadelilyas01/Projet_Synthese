@@ -17,6 +17,10 @@ import '../widgets/region_selection_sheet.dart';
 import 'faq_page.dart';
 import '../../../../core/widgets/app_logo.dart';
 import '../../../../core/services/biometric_service.dart';
+import '../../../../core/services/demo_mode_service.dart';
+import '../../../call_filtering/presentation/pages/call_screening_demo_page.dart';
+import 'legal_compliance_page.dart';
+import 'observability_page.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -30,11 +34,33 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   final BiometricService _biometricService = BiometricService();
   bool _biometricEnabled = false;
   bool _biometricAvailable = false;
+  bool _isDemoMode = DemoModeService.instance.isDemoActive;
 
   @override
   void initState() {
     super.initState();
     _initBiometrics();
+    _isDemoMode = DemoModeService.instance.isDemoActive;
+  }
+
+  Future<void> _toggleDemoMode(bool val) async {
+    if (val) {
+      await DemoModeService.instance.enableDemoMode();
+    } else {
+      await DemoModeService.instance.disableDemoMode();
+    }
+    if (mounted) {
+      setState(() => _isDemoMode = val);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(val
+              ? 'Mode Démo activé : données réalistes chargées (15 numéros, scénarios).'
+              : 'Mode Démo désactivé : retour à l\'état standard.'),
+          backgroundColor: val ? AppTheme.accentCyan : AppTheme.primaryColor,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   Future<void> _initBiometrics() async {
@@ -523,6 +549,94 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                         ),
                       ),
                     ],
+                  );
+                },
+              ),
+              const Divider(height: 1, indent: 56),
+              ListTile(
+                leading: const Icon(Icons.verified_user_rounded, color: AppTheme.accentGreen, size: 24),
+                title: Text(
+                  currentLocale.languageCode == 'en' ? 'Legal Compliance & Ethics' : 'Conformité Loi 25 & Éthique',
+                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                ),
+                subtitle: Text(
+                  currentLocale.languageCode == 'en'
+                      ? 'Zero address book collection, cryptographic hashing'
+                      : 'Zéro carnet d\'adresses collecté, chiffrement salé',
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.grey),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const LegalCompliancePage()),
+                  );
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Démonstration Jury & Outils Avancés
+          _buildSectionHeader(currentLocale.languageCode == 'en' ? 'JURY DEMO & TOOLS' : 'DÉMONSTRATION JURY & OUTILS'),
+          _buildCard(
+            cardBg: cardBg,
+            borderColor: borderColor,
+            children: [
+              SwitchListTile(
+                value: _isDemoMode,
+                onChanged: _toggleDemoMode,
+                title: Text(
+                  currentLocale.languageCode == 'en' ? 'Jury Demo Mode' : 'Mode Démonstration Jury',
+                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                ),
+                subtitle: Text(
+                  currentLocale.languageCode == 'en'
+                      ? 'Preloads realistic blocked numbers, logs, and fleet stats'
+                      : 'Charge 15 numéros réalistes, scénarios d\'appels et stats de flotte',
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                secondary: const Icon(Icons.science_rounded, color: AppTheme.accentCyan, size: 24),
+              ),
+              const Divider(height: 1, indent: 56),
+              ListTile(
+                leading: const Icon(Icons.phone_locked_rounded, color: AppTheme.primaryColor, size: 24),
+                title: Text(
+                  currentLocale.languageCode == 'en' ? 'Native Call Screening Demo' : 'Simulateur de Filtrage d\'Appels',
+                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                ),
+                subtitle: Text(
+                  currentLocale.languageCode == 'en'
+                      ? 'Real-time Android CallScreeningService interception logs'
+                      : 'Démonstration d\'interception < 3 ms sans sonnerie',
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.grey),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const CallScreeningDemoPage()),
+                  );
+                },
+              ),
+              const Divider(height: 1, indent: 56),
+              ListTile(
+                leading: const Icon(Icons.insights_rounded, color: Colors.cyan, size: 24),
+                title: Text(
+                  currentLocale.languageCode == 'en' ? 'User Observability & Feedback' : 'Observabilité & Retours Utilisateur',
+                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                ),
+                subtitle: Text(
+                  currentLocale.languageCode == 'en'
+                      ? 'Adoption metrics and structured feedback system'
+                      : 'Mesure d\'adoption, fonctionnalités clés et avis structurés',
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.grey),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ObservabilityPage()),
                   );
                 },
               ),

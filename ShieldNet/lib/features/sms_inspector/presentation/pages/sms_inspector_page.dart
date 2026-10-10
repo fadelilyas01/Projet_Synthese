@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/services/sms_phishing_detector.dart';
+import '../../../../core/services/demo_mode_service.dart';
+import '../../../../core/services/observability_service.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../controllers/sms_inspector_controller.dart';
@@ -64,6 +66,7 @@ class _SmsInspectorPageState extends ConsumerState<SmsInspectorPage> {
     if (text.isEmpty) return;
 
     HapticFeedback.mediumImpact();
+    ObservabilityService.instance.recordFeatureUsage('sms_inspection');
     final lang = Localizations.localeOf(context).languageCode;
     ref.read(smsInspectorProvider.notifier).analyze(text, languageCode: lang);
   }
@@ -79,6 +82,7 @@ class _SmsInspectorPageState extends ConsumerState<SmsInspectorPage> {
     final l10n = AppLocalizations.of(context);
     final inspectorState = ref.watch(smsInspectorProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isEn = (l10n?.localeName == 'en') || (Localizations.localeOf(context).languageCode == 'en');
     final cardBg = AppTheme.cardBg(isDark);
     final borderColor = AppTheme.borderColor(isDark);
 
@@ -155,7 +159,49 @@ class _SmsInspectorPageState extends ConsumerState<SmsInspectorPage> {
               ],
             ),
           ),
-          const SizedBox(height: 18),
+          // Échantillons de démonstration (Scénarios réels)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                isEn ? 'EXAMPLE FRAUDULENT SMS TEMPLATES' : 'EXEMPLES DE SMS FRAUDULEUX RÉELS',
+                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.grey, letterSpacing: 1.0),
+              ),
+              const Icon(Icons.touch_app_rounded, size: 14, color: Colors.grey),
+            ],
+          ),
+          const SizedBox(height: 8),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: DemoModeService.demoSmsSamples.map((sample) {
+                final isDangerous = sample['risk'] == 'DANGEROUS';
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: ActionChip(
+                    avatar: Icon(
+                      isDangerous ? Icons.warning_rounded : Icons.verified_user_rounded,
+                      size: 14,
+                      color: isDangerous ? AppTheme.accentRed : AppTheme.accentGreen,
+                    ),
+                    label: Text(
+                      sample['title'] as String,
+                      style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
+                    ),
+                    backgroundColor: cardBg,
+                    side: BorderSide(color: borderColor),
+                    onPressed: () {
+                      HapticFeedback.selectionClick();
+                      _textController.text = sample['text'] as String;
+                      final lang = Localizations.localeOf(context).languageCode;
+                      ref.read(smsInspectorProvider.notifier).analyze(sample['text'] as String, languageCode: lang);
+                    },
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+          const SizedBox(height: 16),
 
           // Zone de saisie
           Container(
@@ -219,6 +265,7 @@ class _SmsInspectorPageState extends ConsumerState<SmsInspectorPage> {
     IconData verdictIcon;
     String verdictTitle = res.verdictTitle;
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final isEn = (l10n?.localeName == 'en') || (Localizations.localeOf(context).languageCode == 'en');
     final scoreLabel = l10n?.smsScoreLabel ?? (isEn ? 'Risk score' : 'Score de risque');
 
@@ -291,40 +338,94 @@ class _SmsInspectorPageState extends ConsumerState<SmsInspectorPage> {
               ),
             ],
           ),
+          // Jauge visuelle explicite du score de risque
           const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+              value: res.riskScore / 100.0,
+              minHeight: 8,
+              backgroundColor: isDark ? Colors.white10 : Colors.black12,
+              valueColor: AlwaysStoppedAnimation<Color>(verdictColor),
+            ),
+          ),
+          const SizedBox(height: 14),
           Text(res.verdictDescription, style: const TextStyle(fontSize: 13, height: 1.4)),
 
-          // Liens extraits
+          // Liens extraits et analyse de réputation approfondie
           if (res.extractedUrls.isNotEmpty) ...[
             const SizedBox(height: 16),
-            Text(
-              isEn ? 'LINKS DETECTED IN MESSAGE' : 'LIENS DÉTECTÉS DANS LE MESSAGE',
-              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.grey, letterSpacing: 1.0),
-            ),
-            const SizedBox(height: 6),
-            ...res.extractedUrls.map((u) => Container(
-              margin: const EdgeInsets.only(bottom: 6),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.red.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.red.withValues(alpha: 0.2)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.link_off_rounded, size: 16, color: Colors.red),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      u,
-                      style: const TextStyle(fontSize: 12, fontFamily: 'monospace', color: Colors.red, fontWeight: FontWeight.bold),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  isEn ? 'DETECTED LINKS & DOMAIN REPUTATION' : 'LIENS DÉTECTÉS & RÉPUTATION DE DOMAINE',
+                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.grey, letterSpacing: 1.0),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(6),
                   ),
-                ],
-              ),
-            )),
+                  child: Text(
+                    '${res.extractedUrls.length} ${isEn ? "link(s)" : "lien(s)"}',
+                    style: const TextStyle(color: Colors.red, fontSize: 10, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            ...res.extractedUrls.map((u) {
+              final uri = Uri.tryParse(u);
+              final host = uri?.host.toLowerCase() ?? u;
+              final isHttp = u.startsWith('http://');
+              final isShortener = ['bit.ly', 'tinyurl.com', 'is.gd', 't.co', 'cutt.ly', 'rb.gy'].any((s) => host.contains(s));
+              final isSuspiciousTld = ['.top', '.xyz', '.ru', '.cn', '.cc', '.live', '.work', '.click'].any((tld) => host.endsWith(tld));
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF0F172A) : const Color(0xFFFEF2F2),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.red.withValues(alpha: 0.25)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.link_off_rounded, size: 18, color: Colors.red),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            u,
+                            style: const TextStyle(fontSize: 12, fontFamily: 'monospace', color: Colors.red, fontWeight: FontWeight.bold),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: [
+                        if (isHttp)
+                          _buildReputationTag('Protocole HTTP non chiffré', Colors.red),
+                        if (isShortener)
+                          _buildReputationTag('Raccourcisseur masquant la destination', Colors.orange),
+                        if (isSuspiciousTld)
+                          _buildReputationTag('Extension de domaine suspecte (.top/.xyz)', Colors.red),
+                        _buildReputationTag('Hôte: $host', Colors.grey),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            }),
           ],
 
           // Signaux d'alerte détectés
@@ -373,6 +474,21 @@ class _SmsInspectorPageState extends ConsumerState<SmsInspectorPage> {
             )),
           ],
         ],
+      ),
+    );
+  }
+
+  Widget _buildReputationTag(String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(color: color, fontSize: 10.5, fontWeight: FontWeight.bold),
       ),
     );
   }
