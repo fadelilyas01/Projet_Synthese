@@ -99,6 +99,13 @@ Pour accélérer les consultations côté client et réduire l'usure de la mémo
 ### 5.3. Détection des environnements altérés
 L'application mobile intègre une routine de vérification au démarrage pour détecter si l'appareil est déverrouillé (*root*) ou s'il utilise des binaires super-utilisateur (`su`), afin d'informer l'utilisateur des risques pour l'intégrité de ses données locales.
 
+### 5.4. Durcissement des configurations d'environnement et politique TLS / HSTS
+Pour prémunir le backend contre les erreurs d'inattention et les fuites d'informations en production :
+- **Validation d'entropie des secrets (`_validate_secrets`)** : Au démarrage du serveur Django, une inspection stricte vérifie que `SECRET_KEY`, `API_KEY` et `HASH_SALT` ne contiennent aucun préfixe par défaut de test (`dev-`, `test-`, `change-me`, `django-insecure`) et respectent une longueur minimale cryptographique (50 caractères pour Django, 32 pour les clés HMAC et API).
+- **Interdiction formelle des jokers `ALLOWED_HOSTS`** : En mode production (`DJANGO_ENV=production`), la présence d'un caractère générique `*` provoque immédiatement un arrêt du serveur via `ImproperlyConfigured`.
+- **Politique CORS & CSRF hermétique** : `CORS_ALLOW_ALL_ORIGINS` est forcé à `False` en production, et les origines fiables doivent être expressément déclarées sous protocole HTTPS (`CSRF_TRUSTED_ORIGINS`).
+- **En-têtes TLS stricts et sécurité des cookies** : En production, `SECURE_SSL_REDIRECT=True`, `SECURE_PROXY_SSL_HEADER=('HTTP_X_FORWARDED_PROTO', 'https')`, `SECURE_HSTS_SECONDS=31536000` (HSTS actif 1 an avec sous-domaines et préchargement), `SESSION_COOKIE_SECURE=True`, `SESSION_COOKIE_HTTPONLY=True` et `CSRF_COOKIE_SECURE=True` garantissent l'inviolabilité des sessions contre les attaques par écoute et vol de cookies (CWE-614, CWE-1004).
+
 ---
 
 ## 6. Matrice de conformité avec la Loi 25 du Québec

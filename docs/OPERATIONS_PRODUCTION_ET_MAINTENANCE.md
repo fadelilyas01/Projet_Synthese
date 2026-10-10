@@ -24,12 +24,19 @@ Ce document constitue la référence opérationnelle pour la mise en production,
 
 Avant toute bascule en production réelle, valider l'ensemble des points de contrôle suivants :
 
-### A. Sécurité et Environnement
-- [ ] `DJANGO_DEBUG=False` vérifié dans les variables d'environnement.
-- [ ] `SECRET_KEY` générée de manière cryptographique (`secrets.token_urlsafe(64)` > 50 caractères).
-- [ ] `API_KEY` et `HASH_SALT` distincts de l'environnement de développement et stockés dans un gestionnaire de secrets (AWS Secrets Manager, HashiCorp Vault ou `.env` avec droits `chmod 600`).
-- [ ] Certificats SSL/TLS valides (A+ SSL Labs recommandé, TLS 1.2 minimum requis).
-- [ ] En-têtes HTTP stricts actifs : `HSTS` (1 an avec sous-domaines), `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `CSP`.
+### A. Sécurité, Environnement & Variables de Production
+- [ ] Créer le fichier `.env.production` à partir du template modèle `shieldnet_backend/.env.production.example` (permissions `chmod 600`).
+- [ ] `DJANGO_ENV=production` et `DJANGO_DEBUG=False` impérativement configurés.
+- [ ] `ALLOWED_HOSTS` configuré avec les domaines réels sans caractère générique (`*` est formellement interdit en prod et lève une exception `ImproperlyConfigured`).
+- [ ] `CORS_ALLOW_ALL_ORIGINS=False` et `CORS_ALLOWED_ORIGINS` restreint aux domaines d'administration autorisés (`https://admin.shieldnet.app`).
+- [ ] `CSRF_TRUSTED_ORIGINS` configuré avec le protocole HTTPS pour tous les hôtes autorisés.
+- [ ] Secrets de production validés (aucun préfixe de dev tel que `dev-`, `test-`, `change-me`, `django-insecure` ; minimum 50 caractères pour `SECRET_KEY`, 32 pour `API_KEY` et `HASH_SALT`).
+- [ ] TLS / HTTPS durci :
+  - `SECURE_SSL_REDIRECT=True`
+  - `SECURE_PROXY_SSL_HEADER=('HTTP_X_FORWARDED_PROTO', 'https')` (derrière reverse-proxy Nginx / Traefik / ALB)
+  - `SECURE_HSTS_SECONDS=31536000` (1 an) avec `SECURE_HSTS_INCLUDE_SUBDOMAINS=True` et `SECURE_HSTS_PRELOAD=True`
+  - `SESSION_COOKIE_SECURE=True`, `CSRF_COOKIE_SECURE=True`, `SESSION_COOKIE_HTTPONLY=True`
+  - `SECURE_REFERRER_POLICY=strict-origin-when-cross-origin`
 - [ ] En-tête `X-API-Version: 1.0.0` présent sur chaque réponse API.
 
 ### B. Base de Données et Cache
@@ -39,10 +46,12 @@ Avant toute bascule en production réelle, valider l'ensemble des points de cont
 - [ ] Connection Pooling configuré (ex. PgBouncer : pool de 50 connexions pour 500 clients concurrents).
 
 ### C. Application Mobile Flutter
+- [ ] Fichier `.env` mobile initialisé selon le gabarit `ShieldNet/.env.production.example`.
+- [ ] `API_BASE_URL` configuré sur l'URL HTTPS finale de production (ex. `https://api.shieldnet.app/api/v1`).
+- [ ] `CERTIFICATE_PINNING_ENABLED=true` avec empreinte SHA-256 du certificat de production valide.
 - [ ] Build release compilé sans drapeaux de debug (`flutter build apk --release` ou AAB pour Google Play).
 - [ ] Obfuscation du code activée (`--obfuscate --split-debug-info=...`).
-- [ ] Clé API et sel de hachage injectés via variables de compilation sécurisées (`--dart-define`).
-- [ ] Certificate Pinning configuré avec l'empreinte SHA-256 du certificat de production.
+- [ ] Clé API et sel de hachage injectés via variables de compilation sécurisées (`--dart-define` ou `.env.production`).
 
 ---
 
