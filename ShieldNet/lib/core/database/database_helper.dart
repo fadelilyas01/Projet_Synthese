@@ -368,12 +368,19 @@ class DatabaseHelper {
     await checkpointWAL();
   }
 
-  /// Insère ou met à jour en lot un ensemble de numéros indésirables (optimisé via SQLite Batch)
+  /// Insère ou met à jour en lot un ensemble de numéros indésirables (optimisé via SQLite Batch).
+  /// Les numéros protégés en liste blanche d'urgence/faux-positifs sont automatiquement exclus.
   Future<void> batchInsertOrUpdateBlacklistedNumbers(List<BlacklistedNumber> numbers) async {
     if (numbers.isEmpty) return;
     final db = await instance.database;
+
+    // Protection anti-faux-positifs : exclure tous les numéros protégés localement
+    final whitelistedRows = await db.query('emergency_whitelist', columns: ['phone_hash']);
+    final whitelistedHashes = whitelistedRows.map((r) => r['phone_hash'] as String).toSet();
+
     final batch = db.batch();
     for (final number in numbers) {
+      if (whitelistedHashes.contains(number.phoneHash)) continue;
       batch.insert(
         'blacklist',
         number.toMap(),
@@ -381,6 +388,30 @@ class DatabaseHelper {
       );
     }
     await batch.commit(noResult: true);
+    await checkpointWAL();
+  }
+
+  /// Blanchit immédiatement une empreinte de faux positif sur l'appareil (immunité native Android immédiate)
+  Future<void> whitelistHashDirect({
+    required String phoneHash,
+    required String label,
+    String? rawOrMaskedNumber,
+  }) async {
+    final now = DateTime.now().toIso8601String();
+    final db = await instance.database;
+    await db.insert(
+      'emergency_whitelist',
+      {
+        'phone_hash': phoneHash,
+        'raw_number': rawOrMaskedNumber ?? '***',
+        'label': label,
+        'is_system_critical': 0,
+        'created_at': now,
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+    // Supprimer également de la liste noire locale si présent
+    await db.delete('blacklist', where: 'phone_hash = ?', whereArgs: [phoneHash]);
     await checkpointWAL();
   }
 

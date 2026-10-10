@@ -98,6 +98,13 @@ class BlacklistNotifier extends StateNotifier<AsyncValue<List<BlacklistedEntry>>
     );
     return result;
   }
+
+  /// Retire immédiatement une entrée contestée de l'état en mémoire vive (réactivité 0ms)
+  void removeEntryLocally(String phoneHash) {
+    state.whenData((entries) {
+      state = AsyncValue.data(entries.where((e) => e.phoneHash != phoneHash).toList());
+    });
+  }
 }
 
 final blacklistControllerProvider =

@@ -63,9 +63,21 @@ from .services import (
 
 class StrictReportSubmissionThrottle(AnonRateThrottle):
     """
-    Limiteur de débit strict anti-pollution: Max 10 signalements par heure par adresse IP anonyme.
+    Limiteur de debit strict anti-pollution: Max 10 signalements par heure par adresse IP anonyme.
     """
     rate = '10/hour'
+
+class SensitiveAuthThrottle(AnonRateThrottle):
+    """Protection anti-brute force sur la connexion : Max 15 tentatives par minute par IP."""
+    rate = '15/minute'
+
+class SensitiveOtpThrottle(AnonRateThrottle):
+    """Protection anti-bombardement de courriels (Email Bombing) : Max 5 demandes de code par minute."""
+    rate = '5/minute'
+
+class SensitiveRegisterThrottle(AnonRateThrottle):
+    """Protection anti-creation massive de faux comptes par des bots : Max 10 inscriptions par minute."""
+    rate = '10/minute'
 
 class BlacklistDownloadView(APIView):
     """
@@ -463,6 +475,7 @@ class RegisterView(APIView):
     Creation d'un nouveau compte utilisateur avec email et mot de passe.
     """
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [SensitiveRegisterThrottle]
 
     @extend_schema(request=UserRegisterSerializer)
     def post(self, request):
@@ -486,6 +499,7 @@ class EmailLoginView(APIView):
     Connexion directe par email et mot de passe avec controle de securite.
     """
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [SensitiveAuthThrottle]
 
     @extend_schema(request=EmailLoginSerializer)
     def post(self, request):
@@ -511,9 +525,9 @@ class GoogleLoginView(APIView):
     """
     POST /api/v1/auth/google/
     Connexion / Inscription securisee avec un compte Google verifie (Google OAuth2).
-    Valide l'authenticite cryptographique du compte aupres de Google pour interdire tout faux compte.
     """
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [SensitiveAuthThrottle]
 
     @extend_schema(request=GoogleLoginSerializer)
     def post(self, request):
@@ -634,6 +648,21 @@ class UserProfileView(APIView):
 
     def put(self, request):
         return self.patch(request)
+
+    def delete(self, request):
+        """
+        DELETE /api/v1/auth/me/
+        Conformite Loi 25 (Quebec, art. 28.1) et PIPEDA (Canada) : Droit a l'oubli et effacement irreversible du compte.
+        Anonymise les signalements pour preserver le bouclier citoyen sans conserver de donnees nominatives.
+        """
+        user = request.user
+        SpamReport.objects.filter(reporter=user).update(reporter=None)
+        SafeReport.objects.filter(reporter=user).update(reporter=None)
+        user.delete()
+        return Response(
+            {'detail': 'Votre compte et vos donnees personnelles ont ete definitivement supprimes conformement a la Loi 25.'},
+            status=status.HTTP_204_NO_CONTENT
+        )
 
 class UpdateUserRegionView(APIView):
     """
@@ -1397,9 +1426,10 @@ from django.core.cache import cache
 class SendEmailOTPView(APIView):
     """
     POST /api/v1/auth/email/send-otp/
-    Génère et envoie un code de vérification OTP à 6 chiffres par courriel.
+    Genere et envoie un code de verification OTP a 6 chiffres par courriel.
     """
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [SensitiveOtpThrottle]
 
     def post(self, request):
         email = request.data.get('email', '').strip().lower()
@@ -1443,9 +1473,10 @@ L'equipe ShieldNet
 class VerifyEmailOTPView(APIView):
     """
     POST /api/v1/auth/email/verify-otp/
-    Vérifie le code OTP à 6 chiffres et authentifie/inscrit l'utilisateur.
+    Verifie le code OTP a 6 chiffres et authentifie l'utilisateur.
     """
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [SensitiveOtpThrottle]
 
     def post(self, request):
         email = request.data.get('email', '').strip().lower()

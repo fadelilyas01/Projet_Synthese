@@ -231,6 +231,13 @@ class ApiService {
     }
     final computedMasked = maskedNumber ?? (rawPhoneNumber != null ? CryptoUtils.maskPhoneNumber(rawPhoneNumber) : '***');
 
+    // 1. Blanchiment immédiat sur l'appareil (Immunité native 0ms pour CallScreeningService)
+    await _databaseHelper.whitelistHashDirect(
+      phoneHash: computedHash,
+      label: 'Faux positif ($reason)',
+      rawOrMaskedNumber: computedMasked,
+    );
+
     try {
       final response = await _dio.post(
         'reports/safe/',
@@ -244,10 +251,31 @@ class ApiService {
       if ((response.statusCode == 200 || response.statusCode == 201) && response.data is Map) {
         return response.data as Map<String, dynamic>;
       }
-      return null;
+      // Réponse non-200 : Sauvegarder dans la file d'attente hors-ligne
+      await _databaseHelper.insertPendingSafeDispute(
+        PendingSafeDispute(
+          phoneHash: computedHash,
+          rawNumber: rawPhoneNumber,
+          maskedNumber: computedMasked,
+          reason: reason,
+          comment: comment,
+          createdAt: DateTime.now().toIso8601String(),
+        ),
+      );
+      return {'local_only': true, 'offline_queued': true};
     } catch (e) {
-      AppLogger.log("Erreur envoi contestation légitime: $e");
-      return null;
+      AppLogger.log("Erreur envoi contestation légitime: $e — Enregistrement hors-ligne.");
+      await _databaseHelper.insertPendingSafeDispute(
+        PendingSafeDispute(
+          phoneHash: computedHash,
+          rawNumber: rawPhoneNumber,
+          maskedNumber: computedMasked,
+          reason: reason,
+          comment: comment,
+          createdAt: DateTime.now().toIso8601String(),
+        ),
+      );
+      return {'local_only': true, 'offline_queued': true};
     }
   }
 

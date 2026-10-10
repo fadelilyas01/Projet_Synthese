@@ -459,6 +459,9 @@ class _ActivityPageState extends ConsumerState<ActivityPage> with SingleTickerPr
                           final nav = Navigator.of(ctx);
 
                           try {
+                            // Retrait réactif immédiat de la liste affichée
+                            ref.read(blacklistProvider.notifier).removeEntryLocally(item.phoneHash);
+
                             final res = await ApiService().submitSafeReport(
                               phoneHash: item.phoneHash,
                               maskedNumber: item.maskedNumber,
@@ -469,14 +472,25 @@ class _ActivityPageState extends ConsumerState<ActivityPage> with SingleTickerPr
                             nav.pop();
                             if (res != null) {
                               await CitizenImpactService.incrementReportsCount();
+                              final isAutoWhitelisted = res['auto_whitelisted'] == true;
+                              final isOfflineQueued = res['offline_queued'] == true;
+
+                              String toastMessage;
+                              if (isAutoWhitelisted) {
+                                toastMessage = 'Numéro débloqué ! Consensus citoyen validé : réhabilité pour toute la communauté.';
+                              } else if (isOfflineQueued) {
+                                toastMessage = 'Numéro débloqué localement ! Contestation mise en file d\'attente.';
+                              } else {
+                                toastMessage = l10n?.disputeSuccessToast ?? 'Numéro débloqué sur votre appareil ! Avis transmis pour réhabilitation.';
+                              }
+
                               messenger.showSnackBar(
                                 SnackBar(
-                                  content: Text(l10n?.disputeSuccessToast ?? 'Avis légitime transmis ! Le consensus communautaire évalue la réhabilitation.'),
+                                  content: Text(toastMessage),
                                   backgroundColor: AppTheme.accentGreen,
                                   behavior: SnackBarBehavior.floating,
                                 ),
                               );
-                              ref.read(blacklistProvider.notifier).syncWithServer();
                             } else {
                               messenger.showSnackBar(
                                 SnackBar(

@@ -20,6 +20,12 @@ void main() {
       reportsCount: 1,
       updatedAt: '',
     ));
+    registerFallbackValue(PendingSafeDispute(
+      phoneHash: 'test',
+      maskedNumber: '***',
+      reason: 'test',
+      createdAt: '',
+    ));
   });
 
   late MockDio mockDio;
@@ -36,6 +42,13 @@ void main() {
         .thenAnswer((_) async => 0);
     when(() => mockDb.insertOrUpdateBlacklistedNumber(any()))
         .thenAnswer((_) async {});
+    when(() => mockDb.whitelistHashDirect(
+          phoneHash: any(named: 'phoneHash'),
+          label: any(named: 'label'),
+          rawOrMaskedNumber: any(named: 'rawOrMaskedNumber'),
+        )).thenAnswer((_) async {});
+    when(() => mockDb.insertPendingSafeDispute(any()))
+        .thenAnswer((_) async => 1);
 
     apiService = ApiService(dio: mockDio, databaseHelper: mockDb);
     SharedPreferences.setMockInitialValues({});
@@ -238,7 +251,7 @@ void main() {
   });
 
   group('ApiService — Contestation Légitime (submitSafeReport)', () {
-    test('Envoi avec phoneHash et maskedNumber réussit', () async {
+    test('Envoi avec phoneHash et maskedNumber réussit et blanchit localement', () async {
       when(() => mockDio.post('reports/safe/', data: any(named: 'data')))
           .thenAnswer((_) async => Response(
                 data: {
@@ -259,6 +272,42 @@ void main() {
 
       expect(res, isNotNull);
       expect(res!['auto_whitelisted'], true);
+
+      // Vérifie l'immunité immédiate locale
+      verify(() => mockDb.whitelistHashDirect(
+            phoneHash: 'h' * 64,
+            label: 'Faux positif (medical)',
+            rawOrMaskedNumber: '+1 819 *** **34',
+          )).called(1);
+    });
+
+    test('Échec réseau bascule en mode hors-ligne sans bloquer l\'utilisateur', () async {
+      when(() => mockDio.post('reports/safe/', data: any(named: 'data')))
+          .thenThrow(DioException(
+        type: DioExceptionType.connectionError,
+        requestOptions: RequestOptions(path: 'reports/safe/'),
+      ));
+
+      final res = await apiService.submitSafeReport(
+        phoneHash: 'f' * 64,
+        maskedNumber: '+1 514 *** **99',
+        reason: 'personal',
+        comment: 'Ami proche',
+      );
+
+      expect(res, isNotNull);
+      expect(res!['local_only'], true);
+      expect(res['offline_queued'], true);
+
+      // Vérifie que l'immunité locale est tout de même accordée
+      verify(() => mockDb.whitelistHashDirect(
+            phoneHash: 'f' * 64,
+            label: 'Faux positif (personal)',
+            rawOrMaskedNumber: '+1 514 *** **99',
+          )).called(1);
+
+      // Vérifie que la contestation est sauvegardée pour synchronisation ultérieure
+      verify(() => mockDb.insertPendingSafeDispute(any())).called(1);
     });
   });
 }
