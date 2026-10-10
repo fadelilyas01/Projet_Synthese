@@ -70,7 +70,8 @@ class GoogleSignInService {
       } else if (errorStr.contains('network_error')) {
         friendlyMessage = 'Problème de connexion réseau avec les serveurs Google.';
       } else {
-        friendlyMessage = 'Connexion Google indisponible : $errorStr';
+        final cleanError = errorStr.replaceFirst('Exception: ', '').trim();
+        friendlyMessage = cleanError.isNotEmpty ? cleanError : 'Connexion Google indisponible.';
       }
       return GoogleSignInResult(
         success: false,

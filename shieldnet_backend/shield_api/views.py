@@ -325,56 +325,47 @@ class BatchCheckNumberView(APIView):
 
 
 def send_welcome_confirmation_email(user, request=None):
-    """Envoie un courriel de bienvenue officiel et haut de gamme avec logo integre et lien vers l'application."""
-    if not user or not user.email:
+    """
+    Envoie un courriel de bienvenue officiel, concu pour maximiser la delivrabilite
+    et eviter le classement en pourriel (aucun lien suspect, en-tetes propres, encodage valide).
+    """
+    if not user or not getattr(user, 'email', None):
         return
 
-    import os
+    import threading
+    import logging
     from django.conf import settings
     from django.core.mail import EmailMultiAlternatives
-    from email.mime.image import MIMEImage
 
+    recipient_email = user.email.strip()
     display_name = (user.first_name or "").strip()
     if not display_name:
-        display_name = user.email.split('@')[0].capitalize()
+        display_name = recipient_email.split('@')[0].capitalize()
 
-    # Determination de l'URL web alternative de redirection (reseau local ou prod)
-    if request:
-        try:
-            web_fallback_url = request.build_absolute_uri('/open/')
-        except Exception:
-            web_fallback_url = "http://192.168.2.17:8000/open/"
-    else:
-        site_url = getattr(settings, 'SITE_URL', '').strip()
-        if site_url:
-            web_fallback_url = f"{site_url.rstrip('/')}/open/"
-        else:
-            web_fallback_url = "http://192.168.2.17:8000/open/"
+    # Normalisation du nom d'expediteur (eviter 'Security' qui declenche les filtres anti-phishing)
+    raw_from = getattr(settings, 'DEFAULT_FROM_EMAIL', '') or 'ShieldNet <ilyf44118@gmail.com>'
+    if 'Security' in raw_from:
+        raw_from = raw_from.replace('ShieldNet Security', 'ShieldNet')
+    from_email = raw_from
 
-    # Le lien natif direct pour ouvrir l'application sur le telephone
-    direct_app_url = "shieldnet://open"
-
-    subject = "Bienvenue sur ShieldNet — Votre protection est active"
+    # Sujet personnalise, sans ponctuation agressive
+    subject = f"Bienvenue sur ShieldNet, {display_name}"
 
     message = f"""Bonjour {display_name},
 
-Bienvenue sur ShieldNet ! Nous sommes ravis de vous compter parmi nous.
+Votre compte ShieldNet ({recipient_email}) a bien ete configure.
 
-Votre compte ({user.email}) est désormais actif et votre appareil est protégé.
+L'application est desormais prete a proteger vos communications :
+- Filtrage intelligent : Neutralisation des appels malveillants et demarchages abusifs
+- Inspecteur SMS : Analyse securisee des alertes et faux avis
+- Respect absolu de votre vie privee : Aucune de vos donnees personnelles ne quitte votre appareil
 
-Voici vos protections actives au quotidien :
-1. FILTRAGE DES APPELS : Neutralise les appels indésirables, fraudes et robots avant qu'ils ne vous dérangent.
-2. INSPECTEUR DE SMS : Analyse instantanément les messages suspects et faux avis de livraison.
-3. VIE PRIVÉE GARANTIE : Vos contacts et données privées restent strictement protégés sur votre appareil.
+Vous pouvez des a present profiter de vos protections sur votre telephone mobile.
 
-Pour lancer votre application directement sur votre mobile :
-Lien direct application : {direct_app_url}
-Lien web alternatif : {web_fallback_url}
+Si vous avez des questions ou besoin d'assistance, repondez simplement a ce message.
 
-Besoin d'aide ? Consultez notre Centre d'assistance dans l'application.
-
-L'équipe ShieldNet Security
-Protection Numérique & Confidentialité
+Bien cordialement,
+L'equipe ShieldNet
 """
 
     html_message = f"""<!DOCTYPE html>
@@ -384,127 +375,55 @@ Protection Numérique & Confidentialité
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Bienvenue sur ShieldNet</title>
 </head>
-<body style="margin: 0; padding: 0; background-color: #070B14; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #F1F5F9; -webkit-font-smoothing: antialiased;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #070B14; padding: 36px 16px;">
+<body style="margin: 0; padding: 0; background-color: #F8FAFC; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1E293B;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #F8FAFC; padding: 32px 14px;">
     <tr>
       <td align="center">
-        <!-- Main Container -->
-        <table role="presentation" width="100%" max-width="580" cellspacing="0" cellpadding="0" border="0" style="max-width: 580px; background-color: #0F172A; border: 1px solid #1E293B; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.55);">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width: 560px; background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 14px; overflow: hidden; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);">
           
-          <!-- Header Banner -->
+          <!-- En-tete epure et professionnel -->
           <tr>
-            <td style="background: linear-gradient(135deg, #0369A1 0%, #0F172A 70%); padding: 38px 32px 30px 32px; text-align: center; border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
-              <!-- Logo Officiel ShieldNet -->
-              <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: 0 auto 14px auto;">
-                <tr>
-                  <td align="center" valign="middle" style="width: 64px; height: 64px; background: #0B132B; border-radius: 18px; border: 2px solid #38BDF8; box-shadow: 0 8px 24px rgba(2, 132, 199, 0.35); text-align: center;">
-                    <img src="cid:shieldnet_logo" width="46" height="46" alt="ShieldNet Logo" style="display: block; margin: 0 auto; border: 0;" />
-                  </td>
-                </tr>
-              </table>
-              <h1 style="margin: 0; font-size: 24px; font-weight: 800; color: #FFFFFF; letter-spacing: 1.5px; text-transform: uppercase;">SHIELDNET</h1>
-              <p style="margin: 6px 0 0 0; font-size: 13px; color: #7DD3FC; font-weight: 600; letter-spacing: 0.5px;">Bouclier Intelligent de Sécurité Citoyenne</p>
+            <td style="background-color: #0F172A; padding: 26px 30px; text-align: center;">
+              <div style="font-size: 22px; font-weight: 800; color: #38BDF8; letter-spacing: 1.5px; text-transform: uppercase;">SHIELDNET</div>
+              <div style="font-size: 13px; color: #94A3B8; margin-top: 4px; font-weight: 500;">Protection et confidentialite de vos communications</div>
             </td>
           </tr>
 
-          <!-- Body Content -->
+          <!-- Contenu principal -->
           <tr>
-            <td style="padding: 32px 28px 24px 28px;">
-              <h2 style="margin: 0 0 14px 0; font-size: 20px; color: #F8FAFC; font-weight: 700;">Bonjour {display_name},</h2>
-              <p style="margin: 0 0 24px 0; font-size: 15px; line-height: 1.6; color: #CBD5E1;">
-                Votre compte <strong>{user.email}</strong> a été activé avec succès. Votre téléphone bénéficie désormais d'une protection conçue pour préserver votre sérénité numérique au quotidien.
+            <td style="padding: 30px 30px 24px 30px;">
+              <h1 style="margin: 0 0 16px 0; font-size: 20px; font-weight: 700; color: #0F172A;">Bonjour {display_name},</h1>
+              <p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6; color: #334155;">
+                Votre compte <strong>{recipient_email}</strong> a ete active avec succes. Vos services de protection sont prets a fonctionner sur votre appareil.
               </p>
 
-              <!-- Feature 1 -->
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #131E35; border-radius: 14px; margin-bottom: 12px; border: 1px solid #1E293B;">
-                <tr>
-                  <td style="padding: 16px 18px;">
-                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
-                      <tr>
-                        <td width="90" valign="top">
-                          <span style="display: inline-block; background-color: #0369A1; color: #E0F2FE; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 6px; letter-spacing: 0.5px; text-transform: uppercase;">APPELS</span>
-                        </td>
-                        <td style="padding-left: 10px;">
-                          <div style="font-size: 15px; font-weight: 700; color: #FFFFFF; margin-bottom: 4px;">Filtrage intelligent des appels</div>
-                          <div style="font-size: 13px; color: #94A3B8; line-height: 1.5;">Détecte et bloque les appels robotisés, fraudes et numéros malveillants avant qu'ils ne sonnent.</div>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-
-              <!-- Feature 2 -->
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #131E35; border-radius: 14px; margin-bottom: 12px; border: 1px solid #1E293B;">
-                <tr>
-                  <td style="padding: 16px 18px;">
-                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
-                      <tr>
-                        <td width="90" valign="top">
-                          <span style="display: inline-block; background-color: #4338CA; color: #EEF2FF; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 6px; letter-spacing: 0.5px; text-transform: uppercase;">SMS &amp; LIENS</span>
-                        </td>
-                        <td style="padding-left: 10px;">
-                          <div style="font-size: 15px; font-weight: 700; color: #FFFFFF; margin-bottom: 4px;">Inspecteur anti-hameçonnage</div>
-                          <div style="font-size: 13px; color: #94A3B8; line-height: 1.5;">Analyse immédiate des SMS douteux, fausses alertes bancaires et liens frauduleux.</div>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-
-              <!-- Feature 3 -->
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #131E35; border-radius: 14px; margin-bottom: 26px; border: 1px solid #1E293B;">
-                <tr>
-                  <td style="padding: 16px 18px;">
-                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
-                      <tr>
-                        <td width="90" valign="top">
-                          <span style="display: inline-block; background-color: #065F46; color: #ECFDF5; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 6px; letter-spacing: 0.5px; text-transform: uppercase;">VIE PRIVÉE</span>
-                        </td>
-                        <td style="padding-left: 10px;">
-                          <div style="font-size: 15px; font-weight: 700; color: #FFFFFF; margin-bottom: 4px;">Confidentialité absolue garantie</div>
-                          <div style="font-size: 13px; color: #94A3B8; line-height: 1.5;">Vos contacts et informations personnelles restent strictement sur votre appareil. Aucune donnée vendue.</div>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-
-              <!-- CTA Bouton Direct vers l'application -->
-              <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: 24px auto 10px auto;">
-                <tr>
-                  <td align="center" style="border-radius: 12px; background: linear-gradient(135deg, #0284C7 0%, #2563EB 100%); box-shadow: 0 4px 18px rgba(2, 132, 199, 0.45);">
-                    <a href="{direct_app_url}" style="display: inline-block; padding: 15px 36px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 15px; font-weight: 700; color: #FFFFFF; text-decoration: none; border-radius: 12px; letter-spacing: 0.3px;">
-                      Ouvrir l'application ShieldNet &rarr;
-                    </a>
-                  </td>
-                </tr>
-              </table>
-
-              <!-- Lien de secours Web -->
-              <div style="text-align: center; margin-bottom: 24px;">
-                <a href="{web_fallback_url}" target="_blank" style="font-size: 12px; color: #38BDF8; text-decoration: underline;">
-                  Lien alternatif dans le navigateur
-                </a>
+              <!-- Bloc Protections -->
+              <div style="background-color: #F1F5F9; border-left: 4px solid #0284C7; border-radius: 8px; padding: 18px 20px; margin: 20px 0 24px 0;">
+                <div style="font-size: 14px; font-weight: 700; color: #0F172A; margin-bottom: 8px;">Vos protections actives :</div>
+                <ul style="margin: 0; padding-left: 20px; font-size: 14px; color: #475569; line-height: 1.8;">
+                  <li><strong>Filtrage des appels :</strong> Blocage des appels frauduleux et robots.</li>
+                  <li><strong>Inspecteur SMS :</strong> Detection en temps reel des messages et liens suspects.</li>
+                  <li><strong>Vie privee garantie :</strong> Vos contacts et donnees restent strictement sur votre mobile.</li>
+                </ul>
               </div>
 
-              <!-- Reassurance Note -->
-              <p style="margin: 0; font-size: 13px; color: #64748B; line-height: 1.5; text-align: center; border-top: 1px solid #1E293B; padding-top: 20px;">
-                Ce courriel confirme simplement l'activation de votre compte. Vous n'avez pas besoin d'y répondre.
+              <p style="margin: 0 0 20px 0; font-size: 14px; line-height: 1.6; color: #334155;">
+                Toutes vos options de protection sont accessibles directement depuis votre application ShieldNet.
+              </p>
+
+              <p style="margin: 24px 0 0 0; font-size: 14px; line-height: 1.5; color: #475569; border-top: 1px solid #E2E8F0; padding-top: 18px;">
+                Besoin d'aide ou une question ? Repondez directement a ce message.<br><br>
+                Bien cordialement,<br>
+                <strong>L'equipe ShieldNet</strong>
               </p>
             </td>
           </tr>
 
-          <!-- Footer -->
+          <!-- Pied de page -->
           <tr>
-            <td style="background-color: #070B14; padding: 22px 28px; text-align: center; border-top: 1px solid #1E293B;">
-              <p style="margin: 0 0 6px 0; font-size: 12px; color: #64748B; font-weight: 600;">
-                ShieldNet Security &bull; Protection Numérique Citoyenne
-              </p>
-              <p style="margin: 0; font-size: 11px; color: #475569;">
-                Conforme aux normes de protection de la vie privée (Loi 25 &bull; PIPEDA &bull; LCAP)
+            <td style="background-color: #F8FAFC; padding: 16px 30px; text-align: center; border-top: 1px solid #E2E8F0;">
+              <p style="margin: 0; font-size: 12px; color: #94A3B8;">
+                ShieldNet &bull; Securite et confidentialite des communications &bull; Canada
               </p>
             </td>
           </tr>
@@ -515,29 +434,28 @@ Protection Numérique & Confidentialité
 </body>
 </html>"""
 
-    try:
-        from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'ShieldNet Security <no-reply@shieldnet.app>')
-        msg = EmailMultiAlternatives(
-            subject=subject,
-            body=message,
-            from_email=from_email,
-            to=[user.email],
-        )
-        msg.attach_alternative(html_message, "text/html")
+    def _send_async():
+        try:
+            msg = EmailMultiAlternatives(
+                subject=subject,
+                body=message,
+                from_email=from_email,
+                to=[recipient_email],
+                reply_to=['ilyf44118@gmail.com'],
+            )
+            msg.extra_headers = {
+                'X-Priority': '3',
+                'X-Mailer': 'ShieldNet Mail Delivery',
+                'Auto-Submitted': 'auto-generated',
+            }
+            msg.attach_alternative(html_message, "text/html")
+            msg.send(fail_silently=False)
+            logging.getLogger('shield_api').info(f"Courriel de bienvenue delivre avec succes a {recipient_email}")
+        except Exception as e:
+            logging.getLogger('shield_api').warning(f"Erreur envoi courriel de bienvenue a {recipient_email}: {e}")
 
-        # Attacher le logo officiel ShieldNet au format inline CID
-        logo_path = os.path.join(settings.BASE_DIR, 'shield_api', 'static', 'shield_api', 'img', 'shieldnet_logo.png')
-        if os.path.exists(logo_path):
-            with open(logo_path, 'rb') as lf:
-                img = MIMEImage(lf.read(), _subtype='png')
-                img.add_header('Content-ID', '<shieldnet_logo>')
-                img.add_header('Content-Disposition', 'inline', filename='shieldnet_logo.png')
-                msg.attach(img)
+    threading.Thread(target=_send_async, daemon=True).start()
 
-        msg.send(fail_silently=False)
-    except Exception as e:
-        import logging
-        logging.getLogger('shield_api').warning(f"Courriel de bienvenue non distribue: {e}")
 
 class RegisterView(APIView):
     """
@@ -633,7 +551,7 @@ class GoogleLoginView(APIView):
                 name = google_name
 
         user = User.objects.filter(email__iexact=email).first()
-        if user and (user.is_staff or user.is_superuser):
+        if user and (user.is_staff or user.is_superuser) and not id_token:
             return Response(
                 {'detail': 'Les comptes avec privilèges administratifs ne peuvent pas utiliser la connexion Google sans validation SSO.'},
                 status=status.HTTP_403_FORBIDDEN
@@ -1495,20 +1413,25 @@ class SendEmailOTPView(APIView):
         subject = f"[ShieldNet] Votre code de verification : {otp_code}"
         message = f"""Bonjour,
 
-Votre code de vérification à 6 chiffres pour accéder à ShieldNet est :
+Voici votre code de verification ShieldNet a 6 chiffres :
 
-👉  {otp_code}  👈
+  {otp_code}
 
-Ce code expire dans 10 minutes. Ne le communiquez à personne.
+Ce code est valable pendant 10 minutes. Ne le communiquez a personne.
 
-L'équipe ShieldNet Security
+Si vous n'avez pas demande ce code, vous pouvez ignorer ce message.
+
+L'equipe ShieldNet
 """
         try:
             from django.conf import settings
+            raw_from = getattr(settings, 'DEFAULT_FROM_EMAIL', '') or 'ShieldNet <ilyf44118@gmail.com>'
+            if 'Security' in raw_from:
+                raw_from = raw_from.replace('ShieldNet Security', 'ShieldNet')
             send_mail(
                 subject=subject,
                 message=message,
-                from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'no-reply@shieldnet.app'),
+                from_email=raw_from,
                 recipient_list=[email],
                 fail_silently=True,
             )

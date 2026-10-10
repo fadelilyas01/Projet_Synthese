@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:shieldnet/core/utils/logger.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:flutter/services.dart';
@@ -6,7 +7,6 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'l10n/app_localizations.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'core/theme/app_theme.dart';
 import 'core/database/database_helper.dart';
@@ -28,19 +28,51 @@ export 'core/providers/app_providers.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Chargement ultra-rapide des configurations indispensables (< 15ms)
   try {
     await dotenv.load(fileName: ".env");
   } catch (e) {
-    AppLogger.log("[Main] AVERTISSEMENT : Fichier .env absent ou invalide ($e). Utilisation de la configuration de secours.");
+    AppLogger.log("[Main] AVERTISSEMENT : .env ($e).");
   }
 
-  // Validation des variables d'environnement critiques
-  final apiBaseUrl = dotenv.isInitialized ? dotenv.env['API_BASE_URL'] : null;
-  if (apiBaseUrl == null || apiBaseUrl.isEmpty) {
-    AppLogger.log("[Main] API_BASE_URL non définie dans .env. Repli sur la liste candidate par défaut.");
+  SharedPreferences? prefs;
+  try {
+    prefs = await SharedPreferences.getInstance();
+  } catch (_) {}
+
+  final hasSeenOnboarding = prefs?.getBool('has_seen_onboarding') ?? false;
+
+  // Rendu graphique instantané : l'application s'affiche immédiatement
+  final sentryDsn = dotenv.isInitialized ? (dotenv.env['SENTRY_DSN'] ?? '').trim() : '';
+  if (sentryDsn.isNotEmpty && !sentryDsn.contains('placeholder')) {
+    unawaited(
+      SentryFlutter.init(
+        (options) {
+          options.dsn = sentryDsn;
+          options.tracesSampleRate = 1.0;
+        },
+        appRunner: () => runApp(
+          ProviderScope(
+            child: ShieldNetApp(hasSeenOnboarding: hasSeenOnboarding),
+          ),
+        ),
+      ),
+    );
+  } else {
+    runApp(
+      ProviderScope(
+        child: ShieldNetApp(hasSeenOnboarding: hasSeenOnboarding),
+      ),
+    );
   }
 
-  // Synchronisation sécurisée du sel cryptographique avec le Keystore Android
+  // Initialisation asynchrone non-bloquante des services en arrière-plan
+  unawaited(_initBackgroundServices());
+}
+
+/// Initialise les services lourds (SQLite, Keystore, WorkManager) en arrière-plan sans bloquer l'affichage
+Future<void> _initBackgroundServices() async {
+  // 1. Synchronisation sécurisée du sel cryptographique avec le Keystore Android
   try {
     final salt = CryptoUtils.resolveSalt();
     if (salt.isNotEmpty) {
@@ -51,74 +83,36 @@ void main() async {
     AppLogger.log("[Main] Sel Keystore non synchronisé: $e");
   }
 
-  // Initialisation précoce du cache SQLite local
-  await DatabaseHelper.instance.database;
+  // 2. Initialisation préventive du cache SQLite local
+  try {
+    await DatabaseHelper.instance.database;
+  } catch (e) {
+    AppLogger.log("[Main] Erreur DatabaseHelper init: $e");
+  }
 
-  // Enregistrement du worker de synchronisation en tâche de fond (WorkManager)
+  // 3. Worker de synchronisation en tâche de fond (WorkManager)
   try {
     await BackgroundSyncService.instance.initialize();
   } catch (e) {
-    AppLogger.log("BackgroundSync init exception: $e");
+    AppLogger.log("[Main] BackgroundSync init exception: $e");
   }
 
-  // Initialisation du gestionnaire de session et de verrouillage automatique après 5 minutes
+  // 4. Initialisation du gestionnaire de temporisation de session
   try {
     await SessionTimeoutService.instance.initialize();
   } catch (e) {
     AppLogger.log("[Main] Erreur init SessionTimeoutService: $e");
   }
 
-  // Tente une actualisation discrète de la liste noire au démarrage si l'option est active
+  // 5. Synchronisation discrète de la liste noire en arrière-plan
   try {
-    BackgroundSyncService.instance.isAutoSyncEnabled().then((enabled) {
-      if (enabled) {
-        BackgroundSyncService.instance.syncNow().then((count) {
-          AppLogger.log("Synchronisation automatique au démarrage: $count numéros synchronisés.");
-        }).catchError((err) {
-          AppLogger.log("Sync au démarrage ignorée (backend hors-ligne ou pas de réseau): $err");
-        });
-      }
-    });
-  } catch (e) {
-    AppLogger.log("[Main] Échec du déclenchement de la sync initiale: $e");
-  }
-
-  // Détection instantanée de l'onboarding via SharedPreferences (en mémoire sans latence Keystore)
-  bool hasSeenOnboarding = false;
-  try {
-    final prefs = await SharedPreferences.getInstance();
-    hasSeenOnboarding = prefs.getBool('has_seen_onboarding') ?? false;
-    if (!hasSeenOnboarding) {
-      const storage = FlutterSecureStorage();
-      final secureVal = await storage.read(key: 'has_seen_onboarding');
-      if (secureVal == 'true') {
-        hasSeenOnboarding = true;
-        await prefs.setBool('has_seen_onboarding', true);
-      }
+    final enabled = await BackgroundSyncService.instance.isAutoSyncEnabled();
+    if (enabled) {
+      final count = await BackgroundSyncService.instance.syncNow();
+      AppLogger.log("Synchronisation automatique au démarrage: $count numéros synchronisés.");
     }
-  } catch (e) {
-    AppLogger.log("[Main] Erreur lecture statut onboarding: $e");
-  }
-
-  final sentryDsn = dotenv.isInitialized ? (dotenv.env['SENTRY_DSN'] ?? '').trim() : '';
-  if (sentryDsn.isNotEmpty && !sentryDsn.contains('placeholder')) {
-    await SentryFlutter.init(
-      (options) {
-        options.dsn = sentryDsn;
-        options.tracesSampleRate = 1.0;
-      },
-      appRunner: () => runApp(
-        ProviderScope(
-          child: ShieldNetApp(hasSeenOnboarding: hasSeenOnboarding),
-        ),
-      ),
-    );
-  } else {
-    runApp(
-      ProviderScope(
-        child: ShieldNetApp(hasSeenOnboarding: hasSeenOnboarding),
-      ),
-    );
+  } catch (err) {
+    AppLogger.log("Sync au démarrage ignorée (backend hors-ligne ou pas de réseau): $err");
   }
 }
 

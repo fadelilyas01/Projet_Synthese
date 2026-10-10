@@ -35,3 +35,4 @@
 # 8. Preservation des signatures et annotations
 -keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod
 -dontwarn javax.annotation.**
+-dontwarn com.google.android.play.core.**

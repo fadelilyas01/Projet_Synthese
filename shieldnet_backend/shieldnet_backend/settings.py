@@ -238,4 +238,4 @@ else:
 EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
 EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
 EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True').lower() in ('true', '1', 'yes')
-DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL') or (f'ShieldNet Security <{EMAIL_HOST_USER}>' if EMAIL_HOST_USER else 'ShieldNet Security <no-reply@shieldnet.app>')
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL') or (f'ShieldNet <{EMAIL_HOST_USER}>' if EMAIL_HOST_USER else 'ShieldNet <no-reply@shieldnet.app>')

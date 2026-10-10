@@ -85,24 +85,26 @@ class MainActivity : FlutterFragmentActivity() {
             if (call.method == "setCryptoSalt") {
                 val salt = call.argument<String>("salt")
                 if (salt != null) {
-                    try {
-                        val masterKey = MasterKey.Builder(applicationContext)
-                            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-                            .build()
-                        
-                        val sharedPreferences = EncryptedSharedPreferences.create(
-                            applicationContext,
-                            "shieldnet_secure_prefs",
-                            masterKey,
-                            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-                        )
-                        
-                        sharedPreferences.edit().putString("crypto_salt", salt).apply()
-                        result.success(true)
-                    } catch (e: Exception) {
-                        result.error("KEYSTORE_ERROR", e.message, null)
-                    }
+                    Thread {
+                        try {
+                            val masterKey = MasterKey.Builder(applicationContext)
+                                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                                .build()
+                            
+                            val sharedPreferences = EncryptedSharedPreferences.create(
+                                applicationContext,
+                                "shieldnet_secure_prefs",
+                                masterKey,
+                                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+                            )
+                            
+                            sharedPreferences.edit().putString("crypto_salt", salt).apply()
+                            runOnUiThread { result.success(true) }
+                        } catch (e: Exception) {
+                            runOnUiThread { result.error("KEYSTORE_ERROR", e.message, null) }
+                        }
+                    }.start()
                 } else {
                     result.error("INVALID_ARGUMENT", "Salt cannot be null", null)
                 }
