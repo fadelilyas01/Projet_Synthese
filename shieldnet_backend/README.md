@@ -94,13 +94,14 @@ Pour créer un compte interactif personnalisé avec votre propre mot de passe :
 python manage.py createsuperuser
 ```
 
-### 3. Exécution des tests automatisés
+### 3. Exécution des tests automatisés (74 tests)
 
 ```powershell
-python manage.py test
+# Exécution de la suite officielle de tests du backend
+python manage.py test shield_api
 ```
 
-*La suite de tests vérifie le bon fonctionnement des modèles, de l'authentification JWT, des codes OTP, des calculs de consensus, des règles régionales et de la console d'administration.*
+*La suite de tests (74/74 validés dans le pipeline Jenkins) vérifie le bon fonctionnement des modèles, de l'authentification JWT & Google OAuth2, des codes OTP, des calculs de consensus citoyen, des règles régionales, du rate-limiting anti-brute force et de la console d'administration SOC.*
 
 ### 4. Démarrage du serveur
 
@@ -109,6 +110,7 @@ python manage.py runserver 0.0.0.0:8000
 ```
 
 Accès aux interfaces :
-- **Console d'administration** : [http://127.0.0.1:8000/admin/](http://127.0.0.1:8000/admin/)
-- **Documentation Swagger** : [http://127.0.0.1:8000/api/v1/docs/](http://127.0.0.1:8000/api/v1/docs/)
-- **Sonde de santé** : [http://127.0.0.1:8000/api/v1/health/](http://127.0.0.1:8000/api/v1/health/)
+- **Console d'administration SOC** : [http://127.0.0.1:8000/admin/](http://127.0.0.1:8000/admin/)
+- **Documentation Swagger / OpenAPI** : [http://127.0.0.1:8000/api/v1/docs/](http://127.0.0.1:8000/api/v1/docs/)
+- **Sonde de santé de l'API** : [http://127.0.0.1:8000/api/v1/health/](http://127.0.0.1:8000/api/v1/health/)
+- **Journal de sécurité centralisé** : consultable dans `logs/shieldnet_security.log`

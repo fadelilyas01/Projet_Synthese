@@ -173,7 +173,7 @@ flowchart TD
 2. **Backend Django** : Exécution des 74 tests unitaires et d'API (`python manage.py test shield_api`) et vérification de la cohérence des migrations (`makemigrations --check`).
 3. **Analyse statique Dart** : Contrôle du respect des bonnes pratiques avec `flutter analyze` (aucun avertissement bloquant toléré).
 4. **Tests Frontend Mobile** : Exécution des 62 tests Flutter couvrant la cryptographie HMAC, le masquage des numéros, l'interception et le bon comportement des widgets d'affichage.
-5. **Compilation** : Génération du paquet d'installation Android (`app-release.apk`).
+5. **Compilation** : Génération du paquet d'installation Android (`app-debug.apk` ou `app-release.apk`).
 6. **Archivage** : Mise à disposition du binaire compilé dans les artefacts de build de Jenkins.
 
 ### Démarrage rapide de Jenkins en local :

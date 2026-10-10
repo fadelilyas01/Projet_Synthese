@@ -19,7 +19,7 @@ Contrairement à la majorité des applications commerciales qui aspirent le carn
 
 ## 2. Structure du projet
 
-Le projet est divisé en deux grandes composantes complémentaires :
+Le projet est divisé en deux grandes composantes complémentaires avec une infrastructure CI/CD complète :
 
 ```text
 Projet synthese/
@@ -27,13 +27,13 @@ Projet synthese/
 │   ├── android/              # Service natif d'interception (CallScreeningService) & Gradle 8.13+
 │   ├── lib/                  # Code source Flutter (Clean Architecture, Riverpod)
 │   ├── l10n/                 # Fichiers de localisation bilingues (français / anglais)
-│   └── test/                 # 52 tests automatisés (unitaires, services et sécurité)
+│   └── test/                 # 62 tests automatisés (unitaires, services, observabilité et sécurité)
 │
 ├── shieldnet_backend/        # Serveur d'API REST et console de modération (Django)
 │   ├── shield_api/           # API REST, modèles, services de modération, OTP et consensus
+│   │   └── tests/            # 74 tests automatisés du backend (API, consensus, RBAC et modération)
 │   ├── shieldnet_backend/    # Configuration générale et routage Django
-│   ├── templates/            # Gabarits HTML de la console d'administration
-│   └── test/                 # 74 tests automatisés du backend
+│   └── templates/            # Gabarits HTML de la console d'administration SOC
 │
 ├── docs/                     # Documentation technique détaillée
 │   ├── ARCHITECTURE_ET_CONCEPTION.md
@@ -41,8 +41,10 @@ Projet synthese/
 │   ├── OPERATIONS_PRODUCTION_ET_MAINTENANCE.md # Guide des opérations, PRA, scalabilité et versioning
 │   └── SECURITY_AND_THREAT_MODEL.md
 │
+├── Jenkinsfile               # Pipeline d'intégration continue CI/CD (136 tests, linting, build APK)
+├── docker-compose.jenkins.yml# Déploiement local du serveur Jenkins LTS conteneurisé
 ├── start-dev.ps1             # Script de démarrage de l'environnement de développement
-└── test-all.ps1              # Script pour exécuter l'ensemble des 136 tests
+└── test-all.ps1              # Script pour exécuter l'ensemble des 136 tests automatisés
 ```
 
 ---
@@ -53,6 +55,7 @@ Projet synthese/
 - **Python 3.10 ou supérieur** (testé avec Python 3.12)
 - **Flutter SDK 3.27 ou supérieur**
 - **Android Studio** avec un émulateur configuré (API 29+) ou un appareil Android en mode débogage
+- **Docker** (optionnel, pour exécuter le serveur Jenkins CI/CD local)
 
 ---
 
@@ -82,10 +85,10 @@ python manage.py runserver 0.0.0.0:8000
 ```
 
 Une fois le serveur en ligne :
-- **Console d'administration** : [http://127.0.0.1:8000/admin/](http://127.0.0.1:8000/admin/)
+- **Console d'administration SOC** : [http://127.0.0.1:8000/admin/](http://127.0.0.1:8000/admin/)
   - Accès sécurisé : comptes configurés via les variables d'environnement (`ADMIN_EMAIL`, `ADMIN_PASSWORD` dans `.env`) ou créés avec `python manage.py createsuperuser`
-- **Documentation Swagger** : [http://127.0.0.1:8000/api/v1/docs/](http://127.0.0.1:8000/api/v1/docs/)
-- **Sonde de santé** : [http://127.0.0.1:8000/api/v1/health/](http://127.0.0.1:8000/api/v1/health/)
+- **Documentation Swagger / OpenAPI** : [http://127.0.0.1:8000/api/v1/docs/](http://127.0.0.1:8000/api/v1/docs/)
+- **Sonde de santé de l'API** : [http://127.0.0.1:8000/api/v1/health/](http://127.0.0.1:8000/api/v1/health/)
 
 ---
 
@@ -104,18 +107,46 @@ flutter gen-l10n
 flutter run
 ```
 
-*Note : si vous utilisez l'émulateur standard Android, l'adresse de votre machine hôte est automatiquement configurée sur `10.0.2.2:8000`.*
+*Note : si vous utilisez l'émulateur standard Android, l'adresse de votre machine hôte est automatiquement configurée sur `10.0.2.2:8000` via le client intelligent [`ApiClient`](file:///C:/Projet/Projet%20synthese/ShieldNet/lib/core/network/api_client.dart).*
 
 ---
 
 ## 4. Tests automatisés et qualité du code
 
-Le projet comprend **136 tests automatisés (100% passants)** qui valident le bon fonctionnement de l'ensemble de la solution :
+Le projet comprend **136 tests automatisés (100% au vert)** validant le bon fonctionnement de l'ensemble de la solution :
 
-- **74 tests côté backend (Django)** : couvrent l'API REST, l'authentification JWT, les codes OTP, les calculs de consensus citoyen, le filtrage régional, les métriques SOC et la modération.
-- **62 tests côté mobile (Flutter)** : valident le filtrage d'appels, l'IA prédictive, le hachage HMAC-SHA256, la gestion de session (timeout 5 min avec empreinte), l'observabilité utilisateur, le mode démo jury, le stockage sécurisé et la résilience réseau (retry & backoff).
+- **74 tests côté backend (Django)** : couvrent l'API REST, l'authentification JWT, les codes OTP, les calculs de consensus citoyen, le filtrage régional, les métriques SOC, la modération et la résilience aux pannes.
+- **62 tests côté mobile (Flutter)** : valident le filtrage d'appels, l'IA prédictive, le hachage HMAC-SHA256, la gestion de session (timeout 5 min avec reverrouillage biométrique), l'observabilité utilisateur, le mode démo jury, le stockage sécurisé et la résilience réseau (retry exponentiel & backoff).
 
-Pour exécuter tous les tests d'un seul coup :
+Pour exécuter la suite complète des 136 tests d'un seul coup :
 ```powershell
 .\test-all.ps1
 ```
+
+---
+
+## 5. Pipeline d'Intégration Continue (CI/CD) avec Jenkins
+
+La qualité et l'intégrité du code sont automatisées à chaque validation via le fichier [`Jenkinsfile`](file:///C:/Projet/Projet%20synthese/Jenkinsfile).
+
+### Étapes du pipeline Jenkins (136 tests validés) :
+1. **Environnement & Outils** : Détection des exécutables et versions (`python`, `flutter`, `git`).
+2. **Backend — Validation & Tests (Django)** : Installation des dépendances, vérification stricte des migrations (`makemigrations --check --dry-run`) et exécution des **74 tests unitaires** (`python manage.py test shield_api`).
+3. **Mobile — Analyse Statique (Flutter Linter)** : Analyse rigoureuse du code Dart avec `flutter analyze` (**0 avertissement bloquant toléré**).
+4. **Mobile — Tests Unitaires & Widgets (Flutter)** : Exécution des **62 tests automatisés** avec `flutter test`.
+5. **Mobile — Compilation de l'APK Android** : Génération automatisée du paquet d'application avec `flutter build apk --debug`.
+6. **Archivage des Artefacts** : Conservation et mise à disposition directe du binaire APK compilé (`app-debug.apk`) dans Jenkins.
+
+### Démarrage rapide de Jenkins en local :
+Un environnement Jenkins prêt à l'emploi est configuré via [`docker-compose.jenkins.yml`](file:///C:/Projet/Projet%20synthese/docker-compose.jenkins.yml) :
+
+```powershell
+# Démarrer le conteneur Jenkins
+docker compose -f docker-compose.jenkins.yml up -d
+
+# Récupérer le mot de passe initial administrateur
+docker exec shieldnet_jenkins cat /var/jenkins_home/secrets/initialAdminPassword
+```
+
+L'interface web est accessible à l'adresse : **[http://localhost:8080](http://localhost:8080)**.
+Le pipeline exécute automatiquement les 136 tests et archive l'APK téléchargeable à chaque commit.
