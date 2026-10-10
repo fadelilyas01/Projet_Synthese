@@ -41,10 +41,16 @@ class BiometricService {
     return await prefs.setBool(_prefsKey, enabled);
   }
 
+  static bool _isAuthenticating = false;
+
+  /// Indique si une authentification biométrique est activement en cours
+  static bool get isAuthenticating => _isAuthenticating;
+
   /// Déclenche la vérification biométrique avec message personnalisé
   Future<bool> authenticate({
     String reason = 'Authentifiez-vous pour déverrouiller ShieldNet',
   }) async {
+    _isAuthenticating = true;
     try {
       final bool isAvailable = await isBiometricsAvailable();
       if (!isAvailable) {
@@ -65,6 +71,8 @@ class BiometricService {
     } on PlatformException catch (e) {
       debugPrint('Biometric Authentication Error: ${e.message}');
       return false;
+    } finally {
+      _isAuthenticating = false;
     }
   }
 }

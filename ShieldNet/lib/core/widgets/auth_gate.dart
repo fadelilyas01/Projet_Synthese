@@ -52,7 +52,7 @@ class _AuthGateState extends ConsumerState<AuthGate> with WidgetsBindingObserver
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+    if (state == AppLifecycleState.paused) {
       _sessionTimeout.onAppPaused();
     } else if (state == AppLifecycleState.resumed) {
       _sessionTimeout.onAppResumed().then((locked) {

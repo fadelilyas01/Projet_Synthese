@@ -38,7 +38,11 @@ class _SessionLockScreenState extends ConsumerState<SessionLockScreen> {
   @override
   void initState() {
     super.initState();
-    _checkBiometricsAndPrompt();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _checkBiometricsAndPrompt();
+      }
+    });
   }
 
   @override
