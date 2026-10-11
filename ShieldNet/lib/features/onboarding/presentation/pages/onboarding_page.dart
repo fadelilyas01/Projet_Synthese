@@ -10,6 +10,7 @@ import 'package:shieldnet/l10n/app_localizations.dart';
 import 'package:shieldnet/main.dart';
 import 'package:shieldnet/core/widgets/app_logo.dart';
 import 'package:shieldnet/core/widgets/auth_gate.dart';
+import 'package:shieldnet/core/services/call_screening_service.dart';
 
 class OnboardingPage extends ConsumerStatefulWidget {
   const OnboardingPage({super.key});
@@ -186,6 +187,11 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
       Permission.contacts,
       Permission.sms,
     ].request();
+
+    // Chaîner immédiatement l'attribution du rôle de filtrage natif Android
+    try {
+      await CallScreeningService().requestCallScreeningRole();
+    } catch (_) {}
 
     const storage = FlutterSecureStorage();
     await storage.write(key: 'has_seen_onboarding', value: 'true');

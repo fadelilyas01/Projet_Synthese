@@ -7,12 +7,12 @@ class BiometricService {
   final LocalAuthentication _auth = LocalAuthentication();
   static const String _prefsKey = 'shieldnet_biometric_enabled';
 
-  /// Vérifie si l'appareil supporte la biométrie (Face ID, Touch ID, Empreinte digitale)
+  /// Vérifie si l'appareil supporte la biométrie et qu'au moins une empreinte/visage est configuré
   Future<bool> isBiometricsAvailable() async {
     try {
-      final bool canAuthenticateWithBiometrics = await _auth.canCheckBiometrics;
-      final bool canAuthenticate = canAuthenticateWithBiometrics || await _auth.isDeviceSupported();
-      return canAuthenticate;
+      final bool canCheckBiometrics = await _auth.canCheckBiometrics;
+      final bool isDeviceSupported = await _auth.isDeviceSupported();
+      return canCheckBiometrics && isDeviceSupported;
     } on PlatformException catch (e) {
       debugPrint('BiometricAvailability Error: ${e.message}');
       return false;
@@ -46,30 +46,38 @@ class BiometricService {
   /// Indique si une authentification biométrique est activement en cours
   static bool get isAuthenticating => _isAuthenticating;
 
-  /// Déclenche la vérification biométrique avec message personnalisé
+  /// Déclenche la vérification biométrique avec sécurité stricte
   Future<bool> authenticate({
     String reason = 'Authentifiez-vous pour déverrouiller ShieldNet',
+    bool biometricOnly = true,
   }) async {
+    if (_isAuthenticating) return false;
     _isAuthenticating = true;
     try {
       final bool isAvailable = await isBiometricsAvailable();
       if (!isAvailable) {
-        // Fallback en mode web/test si biométrie indisponible
-        return true;
+        // En mode natif mobile, si la biométrie est indisponible ou non enregistrée,
+        // c'est un ÉCHEC STRICT. Aucun déverrouillage silencieux !
+        if (kIsWeb) return true;
+        debugPrint('[Security] Biométrie indisponible ou non configurée sur le matériel');
+        return false;
       }
 
       final bool didAuthenticate = await _auth.authenticate(
         localizedReason: reason,
-        options: const AuthenticationOptions(
+        options: AuthenticationOptions(
           stickyAuth: true,
-          biometricOnly: false,
+          biometricOnly: biometricOnly,
           useErrorDialogs: true,
         ),
       );
 
       return didAuthenticate;
     } on PlatformException catch (e) {
-      debugPrint('Biometric Authentication Error: ${e.message}');
+      debugPrint('[Security] Erreur biométrique plateforme: ${e.code} - ${e.message}');
+      return false;
+    } catch (e) {
+      debugPrint('[Security] Erreur biométrique: $e');
       return false;
     } finally {
       _isAuthenticating = false;

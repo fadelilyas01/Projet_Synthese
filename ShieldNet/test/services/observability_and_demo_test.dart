@@ -59,7 +59,7 @@ void main() {
 
   group('DemoModeService Tests', () {
     test('Les scénarios de simulation sont complets et valides', () {
-      const scenarios = DemoModeService.demoScenarios;
+      final scenarios = DemoModeService.demoScenarios;
       expect(scenarios.length, greaterThanOrEqualTo(4));
 
       for (final s in scenarios) {

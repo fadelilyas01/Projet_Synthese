@@ -73,6 +73,69 @@ class ShannonEntropyAnalyzer:
         }
 
 
+class ArithmeticSequenceAnalyzer:
+    """
+    Détecteur de motifs arithmétiques et séquentiels non aléatoires.
+    Comble un angle mort classique de l'entropie de Shannon :
+    les suites arithmétiques (ex: 1234567, 9876543) ont une entropie
+    apparente élevée malgré leur nature 100% synthétique générée par automate.
+    """
+    @classmethod
+    def evaluate_sequences(cls, raw_number: str) -> dict:
+        digits = re.sub(r'\D', '', raw_number or '')
+        if len(digits) == 11 and digits.startswith('1'):
+            digits = digits[1:]
+        if len(digits) < 7:
+            return {'has_pattern': False, 'pattern_type': None, 'description': ''}
+
+        # 1. Suite arithmétique croissante ou décroissante (>= 5 chiffres consécutifs)
+        for i in range(len(digits) - 4):
+            slice_5 = [int(d) for d in digits[i:i+5]]
+            diffs = [slice_5[j+1] - slice_5[j] for j in range(4)]
+            if all(d == 1 for d in diffs):
+                seq_str = ''.join(digits[i:i+5])
+                # Ignorer '01234' isolé qui résulte fréquemment d'un central terminant par 0 et d'une ligne 1234 (ex: 800-1234)
+                if seq_str == '01234':
+                    if i + 5 < len(digits) and digits[i+5] == '5':
+                        seq_str = '012345'
+                    else:
+                        continue
+                return {
+                    'has_pattern': True,
+                    'pattern_type': 'ASCENDING_RUN',
+                    'description': f"Séquence arithmétique croissante artificielle ({seq_str}), typique d'un composeur automatique."
+                }
+            if all(d == -1 for d in diffs):
+                seq_str = ''.join(digits[i:i+5])
+                return {
+                    'has_pattern': True,
+                    'pattern_type': 'DESCENDING_RUN',
+                    'description': f"Séquence arithmétique décroissante artificielle ({seq_str}), typique d'un composeur automatique."
+                }
+
+        # 2. Motif périodique oscillant (ex: 121212, 787878 sur 6 chiffres)
+        for i in range(len(digits) - 5):
+            slice_6 = digits[i:i+6]
+            if slice_6[0] == slice_6[2] == slice_6[4] and slice_6[1] == slice_6[3] == slice_6[5] and slice_6[0] != slice_6[1]:
+                return {
+                    'has_pattern': True,
+                    'pattern_type': 'PERIODIC_OSCILLATION',
+                    'description': f"Motif périodique oscillant détecté ({slice_6}), caractéristique d'une génération VoIP synthétique."
+                }
+
+        # 3. Bloc répétitif dense (ex: 8888, 0000 sur 4 chiffres consécutifs)
+        for i in range(len(digits) - 3):
+            slice_4 = digits[i:i+4]
+            if slice_4[0] == slice_4[1] == slice_4[2] == slice_4[3]:
+                return {
+                    'has_pattern': True,
+                    'pattern_type': 'REPETITIVE_BLOCK',
+                    'description': f"Répétition artificielle consécutive ({slice_4}), indicative de numéroteur prédictif."
+                }
+
+        return {'has_pattern': False, 'pattern_type': None, 'description': ''}
+
+
 class TemporalDecayService:
     """
     Amortissement temporel exponentiel des signalements télécoms.
@@ -119,17 +182,40 @@ class AdversarialImpersonationDetector:
         'compte bloque', 'argent immediat', 'frais urgents', 'amende impayee'
     }
 
+    NEGATION_WORDS = {
+        'ne', 'pas', 'jamais', 'aucun', 'aucune', 'sans', 'nullement', 'rien', 'ni',
+        'not', 'never', 'no', 'none', 'neither', 'nor', 'fake', 'faux'
+    }
+
+    @classmethod
+    def _is_negated_extortion(cls, text: str, extortion_kw: str) -> bool:
+        """Détecte si la mention d'extorsion est précédée d'une négation (ex: 'ne demande pas de carte cadeau')."""
+        words = text.split()
+        kw_words = extortion_kw.split()
+        n = len(kw_words)
+        for i in range(len(words) - n + 1):
+            if words[i:i+n] == kw_words:
+                window_start = max(0, i - 6)
+                preceding = words[window_start:i]
+                if any(w in cls.NEGATION_WORDS for w in preceding):
+                    return True
+        return False
+
     @classmethod
     def detect(cls, text: str) -> dict:
         normalized = normalize_text(text)
         found_authorities = [k for k in cls.AUTHORITY_KEYWORDS if k in normalized]
-        found_extortions = [k for k in cls.EXTORTION_KEYWORDS if k in normalized]
+        raw_extortions = [k for k in cls.EXTORTION_KEYWORDS if k in normalized]
 
-        is_impersonation = bool(found_authorities and found_extortions)
+        active_extortions = [k for k in raw_extortions if not cls._is_negated_extortion(normalized, k)]
+        negated_extortions = [k for k in raw_extortions if cls._is_negated_extortion(normalized, k)]
+
+        is_impersonation = bool(found_authorities and active_extortions)
         return {
             'is_impersonation': is_impersonation,
             'authorities': found_authorities,
-            'extortions': found_extortions,
+            'extortions': active_extortions,
+            'negated_extortions': negated_extortions,
             'severity': 90 if is_impersonation else 0
         }
 
@@ -241,8 +327,9 @@ class BayesianSemanticClassifier:
 
 class PoissonBurstAnalyzer:
     """
-    Analyseur statistique de rafales par modélisation de Poisson.
-    Détecte les pics d'attaques synchronisées (Robocall Flash Bursts).
+    Analyseur statistique de rafales par modélisation de Poisson multi-échelle.
+    Détecte à la fois les pics d'attaques synchronisées ultra-rapides (Flash Robocalls en 15 min),
+    les rafales standard (fenêtre 2h), et les campagnes diffuses prolongées (24h).
     Calcule le Z-score d'anomalie temporelle :
       Z = (k - mu) / sqrt(mu)
     """
@@ -251,9 +338,17 @@ class PoissonBurstAnalyzer:
     @classmethod
     def evaluate_burst(cls, timestamps: list, window_hours: float = 2.0) -> dict:
         if not timestamps:
-            return {'is_burst': False, 'z_score': 0.0, 'recent_count': 0, 'significance': 'NORMALE'}
+            return {
+                'is_burst': False,
+                'z_score': 0.0,
+                'recent_count': 0,
+                'significance': 'NORMALE',
+                'multi_scale': {'micro_15m_z': 0.0, 'standard_z': 0.0, 'macro_24h_z': 0.0}
+            }
 
         now = timezone.now()
+
+        # Fenêtre principale demandée (par défaut 2h)
         threshold = now - timedelta(hours=window_hours)
         recent_count = sum(1 for t in timestamps if t and t >= threshold)
 
@@ -261,24 +356,53 @@ class PoissonBurstAnalyzer:
         variance = expected_count
         z_score = (recent_count - expected_count) / math.sqrt(variance)
 
-        is_burst = recent_count >= 2 and z_score >= 2.5
-        significance = 'CRITIQUE' if z_score >= 4.0 else ('ÉLEVÉE' if z_score >= 2.5 else 'NORMALE')
+        # Échelle micro-rafale (15 minutes) pour détecter les flash attacks
+        micro_threshold = now - timedelta(minutes=15)
+        micro_count = sum(1 for t in timestamps if t and t >= micro_threshold)
+        micro_expected = max(0.04, cls.BASELINE_RATE_PER_HOUR * 0.25)
+        micro_z = (micro_count - micro_expected) / math.sqrt(micro_expected)
+
+        # Échelle macro-campagne (24 heures) pour détecter les campagnes étalées
+        macro_threshold = now - timedelta(hours=24)
+        macro_count = sum(1 for t in timestamps if t and t >= macro_threshold)
+        macro_expected = max(1.0, cls.BASELINE_RATE_PER_HOUR * 24.0)
+        macro_z = (macro_count - macro_expected) / math.sqrt(macro_expected)
+
+        # Détection de rafale : par la fenêtre standard OU par un flash micro-burst critique
+        is_burst = (recent_count >= 2 and z_score >= 2.5) or (micro_count >= 3 and micro_z >= 3.5)
+        effective_z = max(z_score, micro_z if micro_count >= 3 else 0.0)
+
+        significance = 'CRITIQUE' if effective_z >= 4.0 else ('ÉLEVÉE' if effective_z >= 2.5 else 'NORMALE')
+
+        if is_burst:
+            if micro_count >= 3 and micro_z >= 3.5:
+                desc = f"Attaque flash en rafale immédiate : {micro_count} appels en 15 min (Score Z = {round(micro_z, 1)})."
+            else:
+                desc = f"Rafale suspecte détectée : {recent_count} signalements en {int(window_hours)}h (Score Z = {round(z_score, 1)})."
+        else:
+            desc = "Activité temporelle conforme au rythme de référence."
 
         return {
             'is_burst': is_burst,
             'recent_count': recent_count,
             'z_score': round(max(0.0, z_score), 2),
             'significance': significance,
-            'description': (
-                f"Rafale suspecte détectée : {recent_count} signalements en {int(window_hours)}h (Score Z = {round(z_score, 1)})."
-                if is_burst else "Activité temporelle conforme au rythme de référence."
-            )
+            'description': desc,
+            'multi_scale': {
+                'micro_15m_count': micro_count,
+                'micro_15m_z': round(max(0.0, micro_z), 2),
+                'standard_count': recent_count,
+                'standard_z': round(max(0.0, z_score), 2),
+                'macro_24h_count': macro_count,
+                'macro_24h_z': round(max(0.0, macro_z), 2),
+            }
         }
 
 
 class NANPTelephonyValidator:
     """
-    Validateur télécom approfondi pour le Plan de Numérotation Nord-Américain (NANP).
+    Validateur télécom approfondi pour le Plan de Numérotation Nord-Américain (NANP)
+    et qualification des risques internationaux (fraudes Wangiri / callback traps).
     Format canonique : +1-NPA-NXX-XXXX
     NPA (Indicatif régional) : [2-9][0-9]{2}
     NXX (Code du central local) : [2-9][0-9]{2}
@@ -288,27 +412,86 @@ class NANPTelephonyValidator:
        Exemple : +1-819-911-XXXX est un numéro techniquement impossible (100% usurpé).
     2. Plage fictive réservée au cinéma / tests : 555-0100 à 555-0199.
     3. Codes d'assistance annuaire : 555-1212.
+    4. Destinations Wangiri à haut risque de rappel surtaxé (îles isolées, réseaux par satellite).
     """
 
     NANP_REGEX = re.compile(r'^\+1([2-9]\d{2})([2-9]\d{2})(\d{4})$')
     N11_CODES = {'211', '311', '411', '511', '611', '711', '811', '911'}
     TOLL_FREE_NPAS = {'800', '888', '877', '866', '855', '844', '833'}
 
+    WANGIRI_HIGH_RISK_PREFIXES = {
+        '247',  # Île de l'Ascension
+        '290',  # Sainte-Hélène
+        '881',  # Réseaux satellites Globalstar / Iridium
+        '882', '883',  # Réseaux internationaux de télécommunications
+        '870',  # Inmarsat maritime
+        '676',  # Tonga
+        '685',  # Samoa
+        '674',  # Nauru
+        '688',  # Tuvalu
+        '682',  # Îles Cook
+        '232',  # Sierra Leone
+        '252',  # Somalie
+        '220',  # Gambie
+        '235',  # Tchad
+        '245',  # Guinée-Bissau
+        '269',  # Comores
+        '387',  # Bosnie (plages surtaxées)
+        '371',  # Lettonie (plages surtaxées)
+    }
+
     @classmethod
     def validate_number(cls, raw_number: str) -> dict:
         if not raw_number:
             return {'is_valid_nanp': False, 'is_impossible_routing': False, 'details': 'Numéro vide'}
 
-        digits = re.sub(r'\D', '', raw_number)
-        if len(digits) == 10:
+        cleaned = str(raw_number).strip()
+        has_plus = cleaned.startswith('+')
+        digits = re.sub(r'\D', '', cleaned)
+
+        # Vérification Wangiri (sur les chiffres bruts ou format E.164)
+        is_wangiri = any(digits.startswith(pfx) for pfx in cls.WANGIRI_HIGH_RISK_PREFIXES)
+
+        # Seul un numéro nord-américain à 10 chiffres sans '+' explicite reçoit le préfixe '1'
+        if len(digits) == 10 and not has_plus:
             digits = f"1{digits}"
         e164 = f"+{digits}"
 
         match = cls.NANP_REGEX.match(e164)
         if not match:
+            # Numéro hors plan NANP
+            if is_wangiri:
+                return {
+                    'is_valid_nanp': False,
+                    'is_impossible_routing': False,
+                    'is_wangiri_risk': True,
+                    'is_valid_international': True,
+                    'npa': None,
+                    'nxx': None,
+                    'is_fictitious_555': False,
+                    'is_n11_central': False,
+                    'is_toll_free': False,
+                    'details': "Alerte Fraude Télécom : Destination internationale à risque Wangiri (rappel surtaxé exorbitant)."
+                }
+            # Numéro international valide générique (ex: +33, +44, +49)
+            if len(digits) >= 8 and not digits.startswith('1'):
+                return {
+                    'is_valid_nanp': False,
+                    'is_impossible_routing': False,
+                    'is_wangiri_risk': False,
+                    'is_valid_international': True,
+                    'npa': None,
+                    'nxx': None,
+                    'is_fictitious_555': False,
+                    'is_n11_central': False,
+                    'is_toll_free': False,
+                    'details': "Numéro international valide hors zone nord-américaine (+1)."
+                }
             return {
                 'is_valid_nanp': False,
                 'is_impossible_routing': True,
+                'is_wangiri_risk': False,
+                'is_valid_international': False,
                 'npa': None,
                 'nxx': None,
                 'is_fictitious_555': False,
@@ -336,6 +519,8 @@ class NANPTelephonyValidator:
         return {
             'is_valid_nanp': not impossible_routing,
             'is_impossible_routing': impossible_routing,
+            'is_wangiri_risk': False,
+            'is_valid_international': False,
             'parsed': {'npa': npa, 'nxx': nxx, 'line': line},
             'npa': npa,
             'nxx': nxx,
@@ -573,7 +758,9 @@ class CalibratedDecisionFusion:
         is_impossible_routing: bool,
         is_impersonation: bool,
         stir_attestation: str,
-        profile_name: str = 'balanced'
+        profile_name: str = 'balanced',
+        is_wangiri_risk: bool = False,
+        has_arithmetic_pattern: bool = False,
     ) -> tuple[int, float]:
         profile = cls.PROFILES.get(profile_name, cls.PROFILES['balanced'])
         bias = profile['bias']
@@ -608,6 +795,10 @@ class CalibratedDecisionFusion:
             z += 4.0
         if is_synthetic_entropy:
             z += 2.0
+        if is_wangiri_risk:
+            z += 4.5
+        if has_arithmetic_pattern:
+            z += 2.0
 
         # Modificateur cryptographique STIR/SHAKEN
         if stir_attestation == 'A':
@@ -617,7 +808,7 @@ class CalibratedDecisionFusion:
         elif stir_attestation == 'B':
             z += 0.5
 
-        if x_threat == 0 and decayed_spam == 0 and not is_impossible_routing and not is_synthetic_entropy and not is_impersonation:
+        if x_threat == 0 and decayed_spam == 0 and not is_impossible_routing and not is_synthetic_entropy and not is_impersonation and not is_wangiri_risk and not has_arithmetic_pattern:
             composite_score = 0
         else:
             bounded_z = max(-10.0, min(10.0, z))
@@ -716,12 +907,24 @@ class ShieldNetAIEngine:
                 'description': f"Forte convergence citoyenne vers des infractions criminelles ({int(high_risk_ratio * 100)}% de fraude/phishing)."
             })
 
-        # 4. Validation structurelle NANP et Entropie de Shannon
+        # 4. Validation structurelle NANP, Entropie de Shannon et Détection Arithmétique
         nanp_eval = NANPTelephonyValidator.validate_number(phone_number)
         entropy_eval = {'entropy': 0.0, 'is_synthetic': False}
+        arithmetic_eval = {'has_pattern': False, 'pattern_type': None, 'description': ''}
 
         if phone_number:
             entropy_eval = ShannonEntropyAnalyzer.evaluate_entropy_risk(phone_number)
+            arithmetic_eval = ArithmeticSequenceAnalyzer.evaluate_sequences(phone_number)
+
+            if arithmetic_eval['has_pattern']:
+                threat_score = min(100.0, threat_score + 30.0)
+                xai_factors.append({
+                    'type': 'ARITHMETIC_PATTERN',
+                    'impact': 'NEGATIVE',
+                    'weight': 30,
+                    'description': arithmetic_eval['description']
+                })
+
             if entropy_eval['is_synthetic']:
                 threat_score = min(100.0, threat_score + 30.0)
                 xai_factors.append({
@@ -731,7 +934,15 @@ class ShieldNetAIEngine:
                     'description': entropy_eval['description']
                 })
 
-            if nanp_eval['is_impossible_routing']:
+            if nanp_eval.get('is_wangiri_risk'):
+                threat_score = max(threat_score, 90.0)
+                xai_factors.append({
+                    'type': 'WANGIRI_FRAUD',
+                    'impact': 'NEGATIVE',
+                    'weight': 50,
+                    'description': nanp_eval['details']
+                })
+            elif nanp_eval['is_impossible_routing']:
                 threat_score = max(threat_score, 85.0)
                 xai_factors.append({
                     'type': 'TELECOM_STRUCTURE',
@@ -739,7 +950,7 @@ class ShieldNetAIEngine:
                     'weight': 45,
                     'description': nanp_eval['details']
                 })
-            elif not nanp_eval['is_valid_nanp']:
+            elif not nanp_eval['is_valid_nanp'] and not nanp_eval.get('is_valid_international'):
                 xai_factors.append({
                     'type': 'TELECOM_STRUCTURE',
                     'impact': 'NEGATIVE',
@@ -783,6 +994,14 @@ class ShieldNetAIEngine:
                 'description': "Attestation STIR/SHAKEN Niveau B (Authenticité partielle du trunk SIP d'entreprise)."
             })
 
+        # Qualification de l'incertitude épistémique (maturité de l'échantillon)
+        if total_interactions >= 5:
+            epistemic_confidence = "ELEVEE (Échantillon robuste >5 retours)"
+        elif total_interactions >= 2:
+            epistemic_confidence = "MODEREE (Quorum citoyen émergent)"
+        else:
+            epistemic_confidence = "PRELIMINAIRE (Signalement individuel ou inférence heuristique)"
+
         # 5. Fusion décisionnelle par régression logistique sigmoïde (Platt Scaling)
         ai_risk_score, fp_confidence = CalibratedDecisionFusion.fuse_signals(
             threat_score=threat_score,
@@ -795,7 +1014,9 @@ class ShieldNetAIEngine:
             is_impossible_routing=nanp_eval['is_impossible_routing'] and spam_count >= 1,
             is_impersonation=is_impersonation,
             stir_attestation=clean_attestation,
-            profile_name=profile
+            profile_name=profile,
+            is_wangiri_risk=nanp_eval.get('is_wangiri_risk', False),
+            has_arithmetic_pattern=arithmetic_eval['has_pattern'],
         )
 
         # Décision humaine souveraine
@@ -920,5 +1141,8 @@ class ShieldNetAIEngine:
                 'nlp_threat_score': threat_score,
                 'bayes_threat_prob': nlp_res['bayes']['probability_threat'],
                 'stir_shaken_attestation': clean_attestation if clean_attestation in ('A', 'B', 'C') else None,
+                'has_arithmetic_pattern': arithmetic_eval['has_pattern'],
+                'is_wangiri_risk': nanp_eval.get('is_wangiri_risk', False),
+                'epistemic_confidence': epistemic_confidence,
             }
         }

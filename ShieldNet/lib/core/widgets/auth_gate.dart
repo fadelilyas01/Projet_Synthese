@@ -88,9 +88,10 @@ class _AuthGateState extends ConsumerState<AuthGate> with WidgetsBindingObserver
       return;
     }
 
-    // Si la protection biométrique est activée en paramètres, exiger la vérification
+    // Si la protection biométrique est activée en paramètres, exiger strictement la vérification
     final authenticated = await _biometricService.authenticate(
       reason: 'Authentifiez-vous par biométrie pour déverrouiller ShieldNet',
+      biometricOnly: true,
     );
 
     if (mounted) {

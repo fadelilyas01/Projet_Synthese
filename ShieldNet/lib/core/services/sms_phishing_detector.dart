@@ -166,15 +166,29 @@ class SmsPhishingDetector {
     'mettre a jour': 15,
   };
 
-  /// Normalise le texte pour la détection insensible aux accents
+  /// Normalise le texte pour la détection insensible aux accents et immunisée contre l'évasion unicode
   static String _normalize(String input) {
-    var str = input.toLowerCase();
+    // Suppression des caractères invisibles et séparateurs de contournement (Zero-Width Evasion)
+    var str = input.replaceAll(RegExp(r'[\u200B\u200C\u200D\uFEFF\u00AD\u2060]'), '');
+    str = str.toLowerCase();
     const withDia = 'àáâãäåèéêëìíîïòóôõöùúûüýñç';
     const withoutDia = 'aaaaaaeeeeiiiiooooouuuuync';
     for (int i = 0; i < withDia.length; i++) {
       str = str.replaceAll(withDia[i], withoutDia[i]);
     }
     return str;
+  }
+
+  /// Convertit les homoglyphes cyrilliques / grecs visuellement identiques vers l'alphabet latin
+  static String _canonicalizeHomoglyphs(String text) {
+    const homoglyphs = {
+      'а': 'a', 'с': 'c', 'е': 'e', 'о': 'o', 'р': 'p', 'х': 'x', 'у': 'y', 'і': 'i', 'ј': 'j', 'ѕ': 's',
+    };
+    var result = text;
+    homoglyphs.forEach((k, v) {
+      result = result.replaceAll(k, v);
+    });
+    return result;
   }
 
   /// Calcule la distance de Levenshtein entre deux chaînes
@@ -206,6 +220,11 @@ class SmsPhishingDetector {
       if (!uriStr.startsWith('http://') && !uriStr.startsWith('https://')) {
         uriStr = 'https://$uriStr';
       }
+      // Regex extraction to preserve non-ASCII / homoglyph characters that Dart Uri.parse would reject
+      final hostMatch = RegExp(r'^https?:\/\/([^\/\s:\?#]+)', caseSensitive: false).firstMatch(uriStr);
+      if (hostMatch != null) {
+        return hostMatch.group(1)!.toLowerCase();
+      }
       final uri = Uri.parse(uriStr);
       return uri.host.toLowerCase();
     } catch (_) {
@@ -229,7 +248,9 @@ class SmsPhishingDetector {
       return null;
     }
 
-    final hostClean = host.replaceAll(RegExp(r'\.(com|ca|org|net|xyz|top|info|site|online|app)$'), '');
+    // Normalisation des homoglyphes (ex: cyrillique 'а' ressemblant au latin 'a')
+    final canonicalHost = _canonicalizeHomoglyphs(host);
+    final hostClean = canonicalHost.replaceAll(RegExp(r'\.(com|ca|org|net|xyz|top|info|site|online|app)$'), '');
     final tokens = hostClean.split(RegExp(r'[\.\-]'));
 
     for (final brand in _protectedBrandKeywords) {
@@ -386,6 +407,22 @@ class SmsPhishingDetector {
               : 'Fin d\'adresse web inhabituelle ($ext), très souvent utilisée pour créer des faux sites pièges.');
           break;
         }
+      }
+
+      // Usurpation par nom de domaine internationalisé (Punycode xn--)
+      if (host != null && (host.startsWith('xn--') || host.contains('.xn--'))) {
+        totalRisk += 45;
+        redFlags.add(isEn
+            ? 'Deceptive website address: disguises characters to mimic a legitimate site.'
+            : 'Adresse web trompeuse : imite un vrai site avec des caractères déguisés.');
+      }
+
+      // Piège de l'arobase (@) dans l'URL pour tromper sur le domaine hôte
+      if (lowUrl.contains('@') && (lowUrl.startsWith('http://') || lowUrl.startsWith('https://'))) {
+        totalRisk += 50;
+        redFlags.add(isEn
+            ? 'Deceptive "@" trick in URL: disguises the destination site by preceding it with misleading text.'
+            : 'Piège de l\'arobase (@) dans l\'URL : trompe l\'utilisateur sur le réel site de destination.');
       }
     }
 

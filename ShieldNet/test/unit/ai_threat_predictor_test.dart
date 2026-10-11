@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shieldnet/core/security/ai_threat_predictor.dart';
+import 'package:shieldnet/core/services/sms_phishing_detector.dart';
 
 void main() {
   group('AiThreatPredictor — Tests d\'Intelligence Artificielle Avancée', () {
@@ -148,6 +149,57 @@ void main() {
       expect(analysis.riskLevel, equals(AiRiskLevel.safe));
       expect(analysis.detectedThreats, isEmpty);
       expect(analysis.riskFactors, isEmpty);
+    });
+
+    test('Détection d\'arnaque Wangiri à rappel surtaxé (Île Ascension +247)', () {
+      final analysis = AiThreatPredictor.analyze(
+        incomingNumber: '+247 555 1234',
+      );
+
+      expect(analysis.isWangiriTrap, isTrue);
+      expect(analysis.riskScore, greaterThanOrEqualTo(75));
+      expect(analysis.riskLevel, equals(AiRiskLevel.dangerous));
+      expect(analysis.recommendation, contains('Wangiri'));
+      expect(analysis.detectedThreats.any((t) => t.contains('Wangiri')), isTrue);
+    });
+
+    test('Détection de motif arithmétique artificiel (Suite croissante)', () {
+      // 12345 en séquence croissante
+      final hasSeq = AiThreatPredictor.hasArithmeticSequence('5141234567');
+      expect(hasSeq, isTrue);
+
+      final analysis = AiThreatPredictor.analyze(
+        incomingNumber: '+1 514 123 4567',
+      );
+
+      expect(analysis.isArithmeticPattern, isTrue);
+      expect(analysis.riskFactors.any((f) => f.factorName.contains('Arithmétique')), isTrue);
+    });
+
+    test('SmsPhishingDetector déjoue l\'évasion par homoglyphes cyrilliques', () {
+      // 'а' cyrillique \u0430 dans 'canadаpost'
+      const scamWithHomoglyph = 'Votre colis est en attente: https://canad\u0430post-suivi.top/reclamation';
+      final result = SmsPhishingDetector.analyze(scamWithHomoglyph);
+
+      expect(result.level, equals(PhishingRiskLevel.dangerous));
+      expect(result.detectedRedFlags.any((f) => f.contains('canadapost')), isTrue);
+    });
+
+    test('SmsPhishingDetector déjoue l\'évasion par espaces invisibles (Zero-Width Space)', () {
+      // Mot-clé 'colis' fragmenté par des espaces de largeur nulle \u200B
+      const scamWithZeroWidth = 'Votre c\u200Bo\u200Bl\u200Bi\u200Bs a besoin de frais de douane: https://livraison-urgent.xyz';
+      final result = SmsPhishingDetector.analyze(scamWithZeroWidth);
+
+      expect(result.level, equals(PhishingRiskLevel.dangerous));
+      expect(result.detectedRedFlags.any((f) => f.contains('colis') || f.contains('livraison')), isTrue);
+    });
+
+    test('SmsPhishingDetector détecte le piège d\'arobase (@) dans l\'URL', () {
+      const scamWithAtTrick = 'Accès suspect à votre compte: https://desjardins.com@piege-hameconnage.online/connexion';
+      final result = SmsPhishingDetector.analyze(scamWithAtTrick);
+
+      expect(result.riskScore, greaterThanOrEqualTo(70));
+      expect(result.detectedRedFlags.any((f) => f.contains('arobase')), isTrue);
     });
   });
 }

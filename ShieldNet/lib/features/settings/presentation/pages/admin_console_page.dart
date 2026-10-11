@@ -10,6 +10,8 @@ import '../widgets/admin_blacklist_tab.dart';
 import '../widgets/admin_reports_tab.dart';
 import '../widgets/admin_users_tab.dart';
 import '../widgets/admin_audit_tab.dart';
+import 'observability_page.dart';
+import '../../../call_filtering/presentation/controllers/blacklist_controller.dart';
 
 class AdminConsolePage extends ConsumerStatefulWidget {
   const AdminConsolePage({super.key});
@@ -116,6 +118,10 @@ class _AdminConsolePageState extends ConsumerState<AdminConsolePage> with Single
       final api = ref.read(apiServiceProvider);
       final count = await api.syncBlacklistWithBackend(delta: delta);
       await DatabaseHelper.instance.checkpointWAL();
+      ref.invalidate(bloomFilterProvider);
+      ref.invalidate(citizenImpactProvider);
+      ref.invalidate(offlineQueueCountProvider);
+      await ref.read(blacklistControllerProvider.notifier).loadBlacklist();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -479,6 +485,7 @@ class _AdminConsolePageState extends ConsumerState<AdminConsolePage> with Single
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(localeProvider);
     final user = ref.watch(authNotifierProvider);
     final isSuperAdmin = user?.isSuperAdmin ?? false;
     final l10n = AppLocalizations.of(context);
@@ -505,6 +512,16 @@ class _AdminConsolePageState extends ConsumerState<AdminConsolePage> with Single
           ],
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.analytics_outlined),
+            tooltip: isEn ? 'Observability & Feedback' : 'Observabilité & Retours Utilisateurs',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ObservabilityPage()),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
             tooltip: l10n?.adminRefreshAll ?? (isEn ? 'Refresh all' : 'Tout actualiser'),

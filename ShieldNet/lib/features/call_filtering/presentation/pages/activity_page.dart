@@ -14,6 +14,7 @@ import '../../../../core/network/api_service.dart';
 import '../controllers/blacklist_controller.dart';
 import '../../domain/entities/blacklisted_entry.dart';
 import '../../../../core/services/call_log_helper.dart';
+import '../../../../core/providers/app_providers.dart';
 
 class ActivityPage extends ConsumerStatefulWidget {
   const ActivityPage({super.key});
@@ -382,6 +383,7 @@ class _ActivityPageState extends ConsumerState<ActivityPage> with SingleTickerPr
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModalState) {
           final l10n = AppLocalizations.of(context);
+          final isEn = (l10n?.localeName == 'en') || (Localizations.localeOf(context).languageCode == 'en');
           return Padding(
             padding: EdgeInsets.only(
               left: 24,
@@ -477,11 +479,18 @@ class _ActivityPageState extends ConsumerState<ActivityPage> with SingleTickerPr
 
                               String toastMessage;
                               if (isAutoWhitelisted) {
-                                toastMessage = 'Numéro débloqué ! Consensus citoyen validé : réhabilité pour toute la communauté.';
+                                toastMessage = isEn
+                                    ? 'Number unblocked! Community consensus validated: rehabilitated for all.'
+                                    : 'Numéro débloqué ! Consensus citoyen validé : réhabilité pour toute la communauté.';
                               } else if (isOfflineQueued) {
-                                toastMessage = 'Numéro débloqué localement ! Contestation mise en file d\'attente.';
+                                toastMessage = isEn
+                                    ? 'Number unblocked locally! Dispute queued for synchronization.'
+                                    : 'Numéro débloqué localement ! Contestation mise en file d\'attente.';
                               } else {
-                                toastMessage = l10n?.disputeSuccessToast ?? 'Numéro débloqué sur votre appareil ! Avis transmis pour réhabilitation.';
+                                toastMessage = l10n?.disputeSuccessToast ??
+                                    (isEn
+                                        ? 'Number unblocked on your device! Review submitted.'
+                                        : 'Numéro débloqué sur votre appareil ! Avis transmis pour réhabilitation.');
                               }
 
                               messenger.showSnackBar(
@@ -494,7 +503,12 @@ class _ActivityPageState extends ConsumerState<ActivityPage> with SingleTickerPr
                             } else {
                               messenger.showSnackBar(
                                 SnackBar(
-                                  content: Text(l10n?.disputeErrorToast ?? 'Impossible d\'enregistrer votre contestation.'),
+                                  content: Text(
+                                    l10n?.disputeErrorToast ??
+                                        (isEn
+                                            ? 'Unable to record your dispute at this time.'
+                                            : 'Impossible d\'enregistrer votre contestation.'),
+                                  ),
                                   backgroundColor: AppTheme.accentRed,
                                   behavior: SnackBarBehavior.floating,
                                 ),
@@ -504,7 +518,7 @@ class _ActivityPageState extends ConsumerState<ActivityPage> with SingleTickerPr
                             nav.pop();
                             messenger.showSnackBar(
                               SnackBar(
-                                content: Text('Erreur: $e'),
+                                content: Text(isEn ? 'Error: $e' : 'Erreur: $e'),
                                 backgroundColor: AppTheme.accentRed,
                                 behavior: SnackBarBehavior.floating,
                               ),
@@ -533,6 +547,7 @@ class _ActivityPageState extends ConsumerState<ActivityPage> with SingleTickerPr
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(localeProvider);
     final blacklistAsync = ref.watch(blacklistControllerProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cardBg = AppTheme.cardBg(isDark);
@@ -589,13 +604,19 @@ class _ActivityPageState extends ConsumerState<ActivityPage> with SingleTickerPr
       if (cat.contains('telemarketing') || cat.contains('démarchage') || cat.contains('demarchage')) return 'TELEMARKETING';
       if (cat.contains('phishing') || cat.contains('hameçonnage')) return 'PHISHING';
       if (cat.contains('robocall') || cat.contains('automate') || cat.contains('silence')) return 'ROBOCALL';
-      return category.toUpperCase();
+      if (cat.contains('wangiri')) return 'CALL-BACK SCAM';
+      if (cat.contains('spoof')) return 'SPOOFED NUMBER';
+      if (cat.contains('survey')) return 'SURVEY';
+      return 'SUSPICIOUS CALL';
     } else {
       if (cat.contains('fraud') || cat.contains('arnaque')) return 'ARNAQUE';
-      if (cat.contains('telemarketing') || cat.contains('démarchage') || cat.contains('demarchage')) return 'DÉMARCHAGE';
+      if (cat.contains('telemarketing') || cat.contains('démarchage') || cat.contains('demarchage')) return 'DÉMARCHAGE ABUSIF';
       if (cat.contains('phishing') || cat.contains('hameçonnage')) return 'HAMEÇONNAGE';
-      if (cat.contains('robocall') || cat.contains('automate') || cat.contains('silence')) return 'AUTOMATE';
-      return category.toUpperCase();
+      if (cat.contains('robocall') || cat.contains('automate') || cat.contains('silence')) return 'APPEL ROBOTISÉ';
+      if (cat.contains('wangiri')) return 'RAPPEL SURTAXÉ';
+      if (cat.contains('spoof')) return 'NUMÉRO USURPÉ';
+      if (cat.contains('survey')) return 'SONDAGE';
+      return 'APPEL SUSPECT';
     }
   }
 
@@ -695,7 +716,11 @@ class _ActivityPageState extends ConsumerState<ActivityPage> with SingleTickerPr
     );
 
     return RefreshIndicator(
-      onRefresh: _loadCallHistory,
+      onRefresh: () async {
+        await _loadCallHistory();
+        await ref.read(blacklistControllerProvider.notifier).loadBlacklist();
+        ref.invalidate(citizenImpactProvider);
+      },
       child: ListView.separated(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         itemCount: _recentCalls.length + 1,
@@ -718,19 +743,19 @@ class _ActivityPageState extends ConsumerState<ActivityPage> with SingleTickerPr
           if (isBlocked || call.callType == call_log.CallType.blocked || call.callType == call_log.CallType.rejected) {
             callIcon = Icons.call_end_rounded;
             callColor = AppTheme.accentRed;
-            statusDesc = l10n?.spamBlocked ?? (isEn ? 'Spam bloqué' : 'Spam bloqué');
+            statusDesc = l10n?.spamBlocked ?? (isEn ? 'Blocked spam' : 'Spam bloqué');
           } else if (call.callType == call_log.CallType.outgoing) {
             callIcon = Icons.call_made_rounded;
             callColor = AppTheme.primaryColor;
-            statusDesc = isEn ? 'Appel sortant' : 'Appel sortant';
+            statusDesc = isEn ? 'Outgoing call' : 'Appel sortant';
           } else if (call.callType == call_log.CallType.missed) {
             callIcon = Icons.call_missed_rounded;
             callColor = AppTheme.accentOrange;
-            statusDesc = isEn ? 'Appel manqué' : 'Appel manqué';
+            statusDesc = isEn ? 'Missed call' : 'Appel manqué';
           } else {
             callIcon = Icons.call_received_rounded;
             callColor = AppTheme.accentGreen;
-            statusDesc = l10n?.incomingCall ?? (isEn ? 'Appel entrant' : 'Appel entrant');
+            statusDesc = l10n?.incomingCall ?? (isEn ? 'Incoming call' : 'Appel entrant');
           }
 
           final defaultUnknown = l10n?.unknownCaller ?? 'Inconnu';
@@ -852,100 +877,116 @@ class _ActivityPageState extends ConsumerState<ActivityPage> with SingleTickerPr
               ),
             ),
             Expanded(
-              child: filtered.isEmpty
-                  ? Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(32.0),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(20),
-                              decoration: BoxDecoration(
-                                color: AppTheme.accentGreen.withValues(alpha: 0.1),
-                                shape: BoxShape.circle,
+              child: RefreshIndicator(
+                onRefresh: () async {
+                  try {
+                    await ref.read(blacklistControllerProvider.notifier).syncWithServer();
+                  } catch (_) {}
+                  ref.invalidate(bloomFilterProvider);
+                  ref.invalidate(citizenImpactProvider);
+                },
+                child: filtered.isEmpty
+                    ? ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        children: [
+                          SizedBox(height: MediaQuery.of(context).size.height * 0.15),
+                          Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(32.0),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(20),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.accentGreen.withValues(alpha: 0.1),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(Icons.verified_user_rounded, size: 48, color: AppTheme.accentGreen),
+                                  ),
+                                  const SizedBox(height: 18),
+                                  Text(
+                                    _searchFilter.isEmpty
+                                        ? (l10n?.noBlockedNumbers ?? 'Aucun numéro bloqué')
+                                        : (l10n?.noResultsFound ?? 'Aucun résultat trouvé'),
+                                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    _searchFilter.isEmpty
+                                        ? (l10n?.noBlockedNumbersDesc ?? 'Tous les numéros signalés ou bloqués par le filtre automatique apparaîtront ici.')
+                                        : (l10n?.tryAnotherSearch ?? 'Essayez avec un autre terme de recherche.'),
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(color: Colors.grey, fontSize: 13, height: 1.4),
+                                  ),
+                                ],
                               ),
-                              child: const Icon(Icons.verified_user_rounded, size: 48, color: AppTheme.accentGreen),
                             ),
-                            const SizedBox(height: 18),
-                            Text(
-                              _searchFilter.isEmpty
-                                  ? (l10n?.noBlockedNumbers ?? 'Aucun numéro bloqué')
-                                  : (l10n?.noResultsFound ?? 'Aucun résultat trouvé'),
-                              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              _searchFilter.isEmpty
-                                  ? (l10n?.noBlockedNumbersDesc ?? 'Tous les numéros signalés ou bloqués par le filtre automatique apparaîtront ici.')
-                                  : (l10n?.tryAnotherSearch ?? 'Essayez avec un autre terme de recherche.'),
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(color: Colors.grey, fontSize: 13, height: 1.4),
-                            ),
-                          ],
-                        ),
-                      ),
-                    )
-                  : ListView.separated(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      itemCount: filtered.length,
-                      separatorBuilder: (context, index) => const SizedBox(height: 8),
-                      itemBuilder: (ctx, index) {
-                        final item = filtered[index];
-                        final catColor = _getCategoryColor(item.category);
-                        return Container(
-                          decoration: BoxDecoration(
-                            color: cardBg,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: borderColor),
                           ),
-                          child: ListTile(
-                            onTap: () => _showBlockedDetailsModal(context, item),
-                            leading: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: catColor.withValues(alpha: 0.12),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(Icons.block_rounded, color: catColor, size: 18),
+                        ],
+                      )
+                    : ListView.separated(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        itemCount: filtered.length,
+                        separatorBuilder: (context, index) => const SizedBox(height: 8),
+                        itemBuilder: (ctx, index) {
+                          final item = filtered[index];
+                          final catColor = _getCategoryColor(item.category);
+                          return Container(
+                            decoration: BoxDecoration(
+                              color: cardBg,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: borderColor),
                             ),
-                            title: Text(
-                              item.maskedNumber.isNotEmpty ? item.maskedNumber : (l10n?.maskedNumberDefault ?? 'Numéro masqué'),
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            subtitle: Row(
-                              children: [
-                                Container(
-                                  margin: const EdgeInsets.only(top: 4),
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: catColor.withValues(alpha: 0.12),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: Text(
-                                    _formatCategory(item.category, isEn),
-                                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: catColor),
-                                  ),
+                            child: ListTile(
+                              onTap: () => _showBlockedDetailsModal(context, item),
+                              leading: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: catColor.withValues(alpha: 0.12),
+                                  shape: BoxShape.circle,
                                 ),
-                              ],
-                            ),
-                            trailing: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: AppTheme.accentRed.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(8),
+                                child: Icon(Icons.block_rounded, color: catColor, size: 18),
                               ),
-                              child: Text(
-                                '${item.riskScore}% ${l10n?.riskWord ?? "risque"}',
-                                style: const TextStyle(color: AppTheme.accentRed, fontWeight: FontWeight.bold, fontSize: 11),
+                              title: Text(
+                                item.maskedNumber.isNotEmpty ? item.maskedNumber : (l10n?.maskedNumberDefault ?? 'Numéro masqué'),
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              subtitle: Row(
+                                children: [
+                                  Container(
+                                    margin: const EdgeInsets.only(top: 4),
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: catColor.withValues(alpha: 0.12),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      _formatCategory(item.category, isEn),
+                                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: catColor),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              trailing: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.accentRed.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  '${item.riskScore}% ${l10n?.riskWord ?? "risque"}',
+                                  style: const TextStyle(color: AppTheme.accentRed, fontWeight: FontWeight.bold, fontSize: 11),
+                                ),
                               ),
                             ),
-                          ),
-                        );
-                      },
-                    ),
+                          );
+                        },
+                      ),
+              ),
             ),
           ],
         );

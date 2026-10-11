@@ -95,7 +95,7 @@ class ApiService {
       return 0;
     } catch (e) {
       AppLogger.log("Erreur de synchronisation réseau: $e");
-      return 0;
+      rethrow;
     }
   }
 

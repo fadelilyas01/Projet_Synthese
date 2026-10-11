@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../providers/auth_provider.dart';
+import '../providers/app_providers.dart';
 import '../services/auth_service.dart';
 import '../services/biometric_service.dart';
 import '../services/session_timeout_service.dart';
@@ -25,7 +25,7 @@ class SessionLockScreen extends ConsumerStatefulWidget {
   ConsumerState<SessionLockScreen> createState() => _SessionLockScreenState();
 }
 
-class _SessionLockScreenState extends ConsumerState<SessionLockScreen> {
+class _SessionLockScreenState extends ConsumerState<SessionLockScreen> with WidgetsBindingObserver {
   final BiometricService _biometricService = BiometricService();
   final TextEditingController _passwordController = TextEditingController();
 
@@ -38,6 +38,7 @@ class _SessionLockScreenState extends ConsumerState<SessionLockScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _checkBiometricsAndPrompt();
@@ -47,8 +48,18 @@ class _SessionLockScreenState extends ConsumerState<SessionLockScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _passwordController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) {
+      if (_isBiometricsAvailable && !_isAuthenticatingBiometrics) {
+        _authenticateWithBiometrics();
+      }
+    }
   }
 
   /// Détecte la biométrie et propose automatiquement l'authentification au lancement
@@ -66,6 +77,7 @@ class _SessionLockScreenState extends ConsumerState<SessionLockScreen> {
   /// Authentification biométrique (Face ID / Empreinte)
   Future<void> _authenticateWithBiometrics() async {
     if (_isAuthenticatingBiometrics) return;
+    final isEn = mounted ? Localizations.localeOf(context).languageCode == 'en' : false;
     setState(() {
       _isAuthenticatingBiometrics = true;
       _errorMessage = null;
@@ -73,7 +85,10 @@ class _SessionLockScreenState extends ConsumerState<SessionLockScreen> {
 
     try {
       final success = await _biometricService.authenticate(
-        reason: 'Confirmez votre identité pour déverrouiller ShieldNet',
+        reason: isEn
+            ? 'Confirm your identity with Face ID or fingerprint to unlock ShieldNet'
+            : 'Confirmez votre identité par biométrie pour déverrouiller ShieldNet',
+        biometricOnly: true,
       );
 
       if (success) {
@@ -84,14 +99,18 @@ class _SessionLockScreenState extends ConsumerState<SessionLockScreen> {
       } else {
         if (mounted) {
           setState(() {
-            _errorMessage = 'Authentification biométrique non reconnue. Utilisez votre mot de passe.';
+            _errorMessage = isEn
+                ? 'Biometric authentication not recognized. Please use your password.'
+                : 'Authentification biométrique non reconnue. Utilisez votre mot de passe.';
           });
         }
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMessage = 'Erreur biométrique. Veuillez saisir votre mot de passe.';
+          _errorMessage = isEn
+              ? 'Biometric error. Please enter your password.'
+              : 'Erreur biométrique. Veuillez saisir votre mot de passe.';
         });
       }
     } finally {
@@ -155,11 +174,15 @@ class _SessionLockScreenState extends ConsumerState<SessionLockScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(localeProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isEn = Localizations.localeOf(context).languageCode == 'en';
     final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
 
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {},
+      child: Scaffold(
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -420,6 +443,7 @@ class _SessionLockScreenState extends ConsumerState<SessionLockScreen> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }

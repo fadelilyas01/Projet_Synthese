@@ -4,6 +4,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../../../../core/providers/app_providers.dart';
 import '../../../../core/database/database_helper.dart';
 import '../../../../core/theme/app_theme.dart';
+import 'observability_page.dart';
 
 /// Page d'outils avancés & diagnostic technique (isolée pour ne pas surcharger l'utilisateur)
 class DeveloperDiagnosticPage extends ConsumerStatefulWidget {
@@ -55,10 +56,11 @@ class _DeveloperDiagnosticPageState extends ConsumerState<DeveloperDiagnosticPag
       });
 
       if (!silent) {
+        final isEn = ref.read(localeProvider).languageCode == 'en';
         final isOk = diag['connected'] == true;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(diag['message']?.toString() ?? (isOk ? 'Pont natif actif' : 'Erreur pont natif')),
+            content: Text(diag['message']?.toString() ?? (isOk ? (isEn ? 'Native bridge active' : 'Pont natif actif') : (isEn ? 'Native bridge error' : 'Erreur pont natif'))),
             backgroundColor: isOk ? AppTheme.accentGreen : AppTheme.accentRed,
           ),
         );
@@ -90,9 +92,10 @@ class _DeveloperDiagnosticPageState extends ConsumerState<DeveloperDiagnosticPag
     await DatabaseHelper.instance.checkpointWAL();
     await _runBridgeDiagnostic(silent: true);
     if (mounted) {
+      final isEn = ref.read(localeProvider).languageCode == 'en';
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Checkpoint SQLite WAL forcé avec succès.'),
+        SnackBar(
+          content: Text(isEn ? 'SQLite WAL checkpoint forced successfully.' : 'Checkpoint SQLite WAL forcé avec succès.'),
           backgroundColor: AppTheme.accentGreen,
         ),
       );
@@ -112,16 +115,18 @@ class _DeveloperDiagnosticPageState extends ConsumerState<DeveloperDiagnosticPag
       stopwatch.stop();
 
       if (mounted) {
+        final isEn = ref.read(localeProvider).languageCode == 'en';
         setState(() {
           _isTestingApi = false;
-          _apiTestResult = 'API Connectée (${stopwatch.elapsedMilliseconds} ms)';
+          _apiTestResult = isEn ? 'API Connected (${stopwatch.elapsedMilliseconds} ms)' : 'API Connectée (${stopwatch.elapsedMilliseconds} ms)';
         });
       }
     } catch (e) {
       if (mounted) {
+        final isEn = ref.read(localeProvider).languageCode == 'en';
         setState(() {
           _isTestingApi = false;
-          _apiTestResult = 'Erreur: $e';
+          _apiTestResult = isEn ? 'Error: $e' : 'Erreur: $e';
         });
       }
     }
@@ -129,13 +134,18 @@ class _DeveloperDiagnosticPageState extends ConsumerState<DeveloperDiagnosticPag
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(localeProvider);
+    final isEn = ref.watch(localeProvider).languageCode == 'en';
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cardBg = AppTheme.cardBg(isDark);
     final borderColor = AppTheme.borderColor(isDark);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Diagnostic & Outils Avancés', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        title: Text(
+          isEn ? 'Technical Diagnostics & Tools' : 'Diagnostic & Outils Avancés',
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+        ),
       ),
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
@@ -146,11 +156,11 @@ class _DeveloperDiagnosticPageState extends ConsumerState<DeveloperDiagnosticPag
             borderColor: borderColor,
             children: [
               ListTile(
-                title: const Text('Pont Natif SQLite ↔ Android', style: TextStyle(fontWeight: FontWeight.bold)),
+                title: Text(isEn ? 'Native Bridge SQLite ↔ Android' : 'Pont Natif SQLite ↔ Android', style: const TextStyle(fontWeight: FontWeight.bold)),
                 subtitle: Text(
                   _bridgeDiagnostic?['connected'] == true
-                      ? 'Opérationnel (${_bridgeDiagnostic?['count'] ?? 0} numéros lus par Android)'
-                      : 'Non connecté',
+                      ? (isEn ? 'Operational (${_bridgeDiagnostic?['count'] ?? 0} numbers read by Android)' : 'Opérationnel (${_bridgeDiagnostic?['count'] ?? 0} numéros lus par Android)')
+                      : (isEn ? 'Not connected' : 'Non connecté'),
                   style: TextStyle(
                     color: _bridgeDiagnostic?['connected'] == true ? AppTheme.accentGreen : AppTheme.accentRed,
                     fontSize: 12,
@@ -161,7 +171,7 @@ class _DeveloperDiagnosticPageState extends ConsumerState<DeveloperDiagnosticPag
                     ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
                     : ElevatedButton(
                         onPressed: () => _runBridgeDiagnostic(silent: false),
-                        child: const Text('Tester'),
+                        child: Text(isEn ? 'Test' : 'Tester'),
                       ),
               ),
               if (_bridgeDiagnostic != null) ...[
@@ -171,9 +181,9 @@ class _DeveloperDiagnosticPageState extends ConsumerState<DeveloperDiagnosticPag
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Emplacement DB : ${_bridgeDiagnostic!['path']}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                      Text(isEn ? 'DB Path: ${_bridgeDiagnostic!['path']}' : 'Emplacement DB : ${_bridgeDiagnostic!['path']}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
                       const SizedBox(height: 4),
-                      Text('Message : ${_bridgeDiagnostic!['message']}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                      Text(isEn ? 'Message: ${_bridgeDiagnostic!['message']}' : 'Message : ${_bridgeDiagnostic!['message']}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
                     ],
                   ),
                 ),
@@ -184,7 +194,7 @@ class _DeveloperDiagnosticPageState extends ConsumerState<DeveloperDiagnosticPag
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Tester un numéro avec Kotlin Telecom :', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                    Text(isEn ? 'Test a number with Kotlin Telecom:' : 'Tester un numéro avec Kotlin Telecom :', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 8),
                     Row(
                       children: [
@@ -205,14 +215,16 @@ class _DeveloperDiagnosticPageState extends ConsumerState<DeveloperDiagnosticPag
                           onPressed: _isTestingPhone ? null : _testNumberWithNative,
                           child: _isTestingPhone
                               ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
-                              : const Text('Vérifier'),
+                              : Text(isEn ? 'Verify' : 'Vérifier'),
                         ),
                       ],
                     ),
                     if (_testPhoneBlockedResult != null) ...[
                       const SizedBox(height: 8),
                       Text(
-                        _testPhoneBlockedResult == true ? 'Verdict : BLOQUÉ (Présent dans la blacklist)' : 'Verdict : AUTORISÉ',
+                        _testPhoneBlockedResult == true
+                            ? (isEn ? 'Verdict: BLOCKED (Present in blacklist)' : 'Verdict : BLOQUÉ (Présent dans la blacklist)')
+                            : (isEn ? 'Verdict: ALLOWED' : 'Verdict : AUTORISÉ'),
                         style: TextStyle(
                           color: _testPhoneBlockedResult == true ? AppTheme.accentRed : AppTheme.accentGreen,
                           fontWeight: FontWeight.bold,
@@ -233,17 +245,17 @@ class _DeveloperDiagnosticPageState extends ConsumerState<DeveloperDiagnosticPag
             borderColor: borderColor,
             children: [
               ListTile(
-                title: const Text('Synchronisation SQLite WAL', style: TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: const Text('Force l\'écriture des transactions WAL sur le disque', style: TextStyle(fontSize: 12)),
+                title: Text(isEn ? 'SQLite WAL Synchronization' : 'Synchronisation SQLite WAL', style: const TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: Text(isEn ? 'Forces WAL transaction commit to disk' : 'Force l\'écriture des transactions WAL sur le disque', style: const TextStyle(fontSize: 12)),
                 trailing: ElevatedButton(
                   onPressed: _forceWALCheckpoint,
-                  child: const Text('Forcer WAL'),
+                  child: Text(isEn ? 'Force WAL' : 'Forcer WAL'),
                 ),
               ),
               if (_dbPath.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                  child: Text('Fichier local : $_dbPath', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                  child: Text(isEn ? 'Local file: $_dbPath' : 'Fichier local : $_dbPath', style: const TextStyle(fontSize: 11, color: Colors.grey)),
                 ),
             ],
           ),
@@ -255,13 +267,13 @@ class _DeveloperDiagnosticPageState extends ConsumerState<DeveloperDiagnosticPag
             borderColor: borderColor,
             children: [
               ListTile(
-                title: const Text('Connexion Backend Django', style: TextStyle(fontWeight: FontWeight.bold)),
+                title: Text(isEn ? 'Django Backend Connection' : 'Connexion Backend Django', style: const TextStyle(fontWeight: FontWeight.bold)),
                 subtitle: Text(dotenv.env['API_BASE_URL'] ?? 'http://10.0.2.2:8000/api/v1', style: const TextStyle(fontSize: 11)),
                 trailing: ElevatedButton(
                   onPressed: _isTestingApi ? null : _testApiConnection,
                   child: _isTestingApi
                       ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Text('Tester API'),
+                      : Text(isEn ? 'Test API' : 'Tester API'),
                 ),
               ),
               if (_apiTestResult != null)
@@ -272,10 +284,37 @@ class _DeveloperDiagnosticPageState extends ConsumerState<DeveloperDiagnosticPag
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
-                      color: _apiTestResult!.startsWith('API Connectée') ? AppTheme.accentGreen : AppTheme.accentRed,
+                      color: (_apiTestResult!.startsWith('API Connectée') || _apiTestResult!.startsWith('API Connected')) ? AppTheme.accentGreen : AppTheme.accentRed,
                     ),
                   ),
                 ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _buildCard(
+            cardBg: cardBg,
+            borderColor: borderColor,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.analytics_rounded, color: Colors.cyan),
+                title: Text(
+                  isEn ? 'Observability & User Feedback' : 'Observabilité & Retours Utilisateurs',
+                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                ),
+                subtitle: Text(
+                  isEn
+                      ? 'View feature telemetry and structured feedback logs'
+                      : 'Télémétrie d\'utilisation et retours utilisateurs structurés',
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.grey),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ObservabilityPage()),
+                  );
+                },
+              ),
             ],
           ),
         ],

@@ -654,6 +654,79 @@ class AdvancedAIEngineTests(TestCase):
             self.assertGreaterEqual(s, 0)
             self.assertLessEqual(s, 100)
 
+    def test_arithmetic_sequence_analyzer(self):
+        from shield_api.ai_engine import ArithmeticSequenceAnalyzer
+
+        # 1. Suite croissante (12345)
+        res_asc = ArithmeticSequenceAnalyzer.evaluate_sequences("+1 514 123 4567")
+        self.assertTrue(res_asc['has_pattern'])
+        self.assertEqual(res_asc['pattern_type'], 'ASCENDING_RUN')
+        self.assertIn("croissante", res_asc['description'])
+
+        # 2. Suite décroissante (98765)
+        res_desc = ArithmeticSequenceAnalyzer.evaluate_sequences("+1 514 987 6500")
+        self.assertTrue(res_desc['has_pattern'])
+        self.assertEqual(res_desc['pattern_type'], 'DESCENDING_RUN')
+
+        # 3. Motif périodique oscillant (121212)
+        res_osc = ArithmeticSequenceAnalyzer.evaluate_sequences("+1 819 121 2120")
+        self.assertTrue(res_osc['has_pattern'])
+        self.assertEqual(res_osc['pattern_type'], 'PERIODIC_OSCILLATION')
+
+        # 4. Bloc répétitif dense (8888)
+        res_rep = ArithmeticSequenceAnalyzer.evaluate_sequences("+1 438 888 8123")
+        self.assertTrue(res_rep['has_pattern'])
+        self.assertEqual(res_rep['pattern_type'], 'REPETITIVE_BLOCK')
+
+        # 5. Numéro normal sans motif
+        res_norm = ArithmeticSequenceAnalyzer.evaluate_sequences("+1 514 800 1234")
+        self.assertFalse(res_norm['has_pattern'])
+
+    def test_adversarial_impersonation_negation_awareness(self):
+        from shield_api.ai_engine import AdversarialImpersonationDetector
+
+        # A. Message préventif citoyen avec négation : NE DOIT PAS être considéré comme une usurpation
+        preventive_text = "Attention : la police ne demande JAMAIS de carte cadeau ni de bitcoin !"
+        res_prev = AdversarialImpersonationDetector.detect(preventive_text)
+        self.assertFalse(res_prev['is_impersonation'])
+        self.assertEqual(res_prev['severity'], 0)
+        self.assertIn('carte cadeau', res_prev['negated_extortions'])
+
+        # B. Message frauduleux actif sans négation : DOIT être détecté avec sévérité maximale
+        attack_text = "Ici la police de Gatineau, mandat d'arret contre vous. Payez en carte cadeau apple immediatement."
+        res_attack = AdversarialImpersonationDetector.detect(attack_text)
+        self.assertTrue(res_attack['is_impersonation'])
+        self.assertEqual(res_attack['severity'], 90)
+
+    def test_wangiri_and_international_telecom_qualification(self):
+        from shield_api.ai_engine import NANPTelephonyValidator
+
+        # 1. Piège Wangiri (Île de l'Ascension +247)
+        res_wangiri = NANPTelephonyValidator.validate_number("+247 555 1234")
+        self.assertTrue(res_wangiri['is_wangiri_risk'])
+        self.assertFalse(res_wangiri['is_impossible_routing'])
+        self.assertIn("Wangiri", res_wangiri['details'])
+
+        # 2. Numéro international standard (+33 France)
+        res_intl = NANPTelephonyValidator.validate_number("+33 1 42 68 55 00")
+        self.assertFalse(res_intl['is_valid_nanp'])
+        self.assertFalse(res_intl['is_impossible_routing'])
+        self.assertFalse(res_intl['is_wangiri_risk'])
+        self.assertTrue(res_intl['is_valid_international'])
+
+    def test_poisson_burst_analyzer_multi_scale(self):
+        from shield_api.ai_engine import PoissonBurstAnalyzer
+        from django.utils import timezone
+        from datetime import timedelta
+
+        now = timezone.now()
+        # Flash attack immédiate : 4 signalements en 10 minutes
+        flash_timestamps = [now - timedelta(minutes=i * 2) for i in range(4)]
+        res = PoissonBurstAnalyzer.evaluate_burst(flash_timestamps, window_hours=2.0)
+        self.assertTrue(res['is_burst'])
+        self.assertIn('multi_scale', res)
+        self.assertGreaterEqual(res['multi_scale']['micro_15m_count'], 4)
+
 
 class ApplicationSecurityAuditTests(APITestCase):
     """

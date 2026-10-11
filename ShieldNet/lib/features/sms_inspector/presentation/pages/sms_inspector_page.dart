@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/providers/app_providers.dart';
 import '../../../../core/services/sms_phishing_detector.dart';
 import '../../../../core/services/demo_mode_service.dart';
 import '../../../../core/services/observability_service.dart';
@@ -79,6 +80,7 @@ class _SmsInspectorPageState extends ConsumerState<SmsInspectorPage> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(localeProvider);
     final l10n = AppLocalizations.of(context);
     final inspectorState = ref.watch(smsInspectorProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -174,7 +176,7 @@ class _SmsInspectorPageState extends ConsumerState<SmsInspectorPage> {
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
-              children: DemoModeService.demoSmsSamples.map((sample) {
+              children: DemoModeService.getDemoSmsSamples(isEn: isEn).map((sample) {
                 final isDangerous = sample['risk'] == 'DANGEROUS';
                 return Padding(
                   padding: const EdgeInsets.only(right: 8),
@@ -359,7 +361,7 @@ class _SmsInspectorPageState extends ConsumerState<SmsInspectorPage> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  isEn ? 'DETECTED LINKS & DOMAIN REPUTATION' : 'LIENS DÉTECTÉS & RÉPUTATION DE DOMAINE',
+                  isEn ? 'DETECTED SUSPICIOUS LINKS' : 'LIENS SUSPECTS DÉTECTÉS',
                   style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.grey, letterSpacing: 1.0),
                 ),
                 Container(
@@ -414,12 +416,21 @@ class _SmsInspectorPageState extends ConsumerState<SmsInspectorPage> {
                       runSpacing: 4,
                       children: [
                         if (isHttp)
-                          _buildReputationTag('Protocole HTTP non chiffré', Colors.red),
+                          _buildReputationTag(
+                            isEn ? 'Unsecured link (HTTP)' : 'Site web non sécurisé (HTTP)',
+                            Colors.red,
+                          ),
                         if (isShortener)
-                          _buildReputationTag('Raccourcisseur masquant la destination', Colors.orange),
+                          _buildReputationTag(
+                            isEn ? 'Shortened link hiding real destination' : 'Lien raccourci masquant la destination',
+                            Colors.orange,
+                          ),
                         if (isSuspiciousTld)
-                          _buildReputationTag('Extension de domaine suspecte (.top/.xyz)', Colors.red),
-                        _buildReputationTag('Hôte: $host', Colors.grey),
+                          _buildReputationTag(
+                            isEn ? 'Suspicious website address' : 'Adresse web suspecte',
+                            Colors.red,
+                          ),
+                        _buildReputationTag('${isEn ? "Website: " : "Site : "}$host', Colors.grey),
                       ],
                     ),
                   ],

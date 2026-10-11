@@ -12,20 +12,15 @@ import '../../../../l10n/app_localizations.dart';
 import '../controllers/blacklist_controller.dart';
 import '../../../../core/services/night_shield_service.dart';
 import '../../../../core/services/call_log_helper.dart';
-import '../../domain/services/serenity_score_calculator.dart';
 import '../widgets/clipboard_banner.dart';
 import '../widgets/action_hub_row.dart';
 import '../widgets/zen_shield_card.dart';
 import '../widgets/simple_metric_card.dart';
-import '../widgets/serenity_score_card.dart';
 import '../widgets/regional_threat_card.dart';
-import '../widgets/device_integrity_banner.dart';
 import '../../../community/presentation/widgets/citizen_impact_card.dart';
-import '../../../settings/presentation/pages/settings_page.dart';
 import '../../../../core/widgets/app_logo.dart';
 import '../widgets/telecom_security_tip_card.dart';
 import '../widgets/peace_of_mind_summary_card.dart';
-import 'call_screening_demo_page.dart';
 
 class DashboardPage extends ConsumerStatefulWidget {
   const DashboardPage({super.key});
@@ -283,13 +278,19 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
       if (cat.contains('telemarketing') || cat.contains('démarchage') || cat.contains('demarchage')) return 'TELEMARKETING';
       if (cat.contains('phishing') || cat.contains('hameçonnage')) return 'PHISHING';
       if (cat.contains('robocall') || cat.contains('automate') || cat.contains('silence')) return 'ROBOCALL';
-      return category.toUpperCase();
+      if (cat.contains('wangiri')) return 'CALL-BACK SCAM';
+      if (cat.contains('spoof')) return 'SPOOFED NUMBER';
+      if (cat.contains('survey')) return 'SURVEY';
+      return 'SUSPICIOUS NUMBER';
     } else {
       if (cat.contains('fraud') || cat.contains('arnaque')) return 'ARNAQUE';
-      if (cat.contains('telemarketing') || cat.contains('démarchage') || cat.contains('demarchage')) return 'DÉMARCHAGE';
+      if (cat.contains('telemarketing') || cat.contains('démarchage') || cat.contains('demarchage')) return 'DÉMARCHAGE ABUSIF';
       if (cat.contains('phishing') || cat.contains('hameçonnage')) return 'HAMEÇONNAGE';
-      if (cat.contains('robocall') || cat.contains('automate') || cat.contains('silence')) return 'AUTOMATE';
-      return category.toUpperCase();
+      if (cat.contains('robocall') || cat.contains('automate') || cat.contains('silence')) return 'APPEL ROBOTISÉ';
+      if (cat.contains('wangiri')) return 'RAPPEL SURTAXÉ';
+      if (cat.contains('spoof')) return 'NUMÉRO USURPÉ';
+      if (cat.contains('survey')) return 'SONDAGE';
+      return 'NUMÉRO SUSPECT';
     }
   }
 
@@ -326,6 +327,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(localeProvider);
     final protectionState = ref.watch(protectionStatusProvider);
     final blacklistAsync = ref.watch(blacklistControllerProvider);
     final isContactsOnly = ref.watch(contactsOnlyProvider);
@@ -340,16 +342,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
     final isEn = (l10n?.localeName == 'en') || (Localizations.localeOf(context).languageCode == 'en');
     final isProtectionActive = protectionState.value ?? false;
     final isSeniorMode = ref.watch(seniorModeProvider);
-    final integrityAsync = ref.watch(deviceIntegrityProvider);
     final regionalThreatsAsync = ref.watch(regionalThreatsProvider);
-
-    final serenityResult = SerenityScoreCalculator.compute(
-      isCallScreeningActive: isProtectionActive,
-      isAutoBlockEnabled: true,
-      isBiometricEnabled: true,
-      isContactsOnlyEnabled: isContactsOnly,
-      isCacheFresh: totalBlocked > 0,
-    );
 
     return Scaffold(
       appBar: AppBar(
@@ -364,11 +357,16 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          await ref.read(blacklistControllerProvider.notifier).syncWithServer();
+          try {
+            await ref.read(blacklistControllerProvider.notifier).syncWithServer();
+          } catch (e) {
+            AppLogger.log('[Dashboard] Erreur de synchronisation réseau: $e');
+          }
+          await _loadInterceptedMetrics();
           ref.invalidate(citizenImpactProvider);
           ref.invalidate(regionalThreatsProvider);
-          ref.invalidate(deviceIntegrityProvider);
           ref.invalidate(bloomFilterProvider);
+          ref.invalidate(offlineQueueCountProvider);
         },
         child: ListView(
           padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
@@ -439,12 +437,6 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
                   ),
                 ],
               ),
-            ),
-
-            // BANDEAU ALERTE INTÉGRITÉ APPAREIL (ROOT)
-            integrityAsync.maybeWhen(
-              data: (integrity) => DeviceIntegrityBanner(result: integrity),
-              orElse: () => const SizedBox.shrink(),
             ),
 
             // BANDEAU MODE SÉNIORS / ACCESSIBILITÉ RENFORCÉE
@@ -620,55 +612,6 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
             // Raccourcis d'actions immédiates : Vérifier un numéro & Inspecteur SMS
             ActionHubRow(onVerifyNumber: () => _showQuickVerificationDialog(context)),
             const SizedBox(height: 14),
-
-            // Espace Démonstration Jury & Conformité
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: borderColor),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppTheme.accentCyan.withValues(alpha: 0.15),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.science_rounded, color: AppTheme.accentCyan, size: 20),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          isEn ? 'Jury Demonstration Space' : 'Espace Démonstration Jury',
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                        ),
-                        Text(
-                          isEn ? 'Native call simulation < 3ms' : 'Simulateur d\'appels < 3ms & logs natifs',
-                          style: const TextStyle(fontSize: 11, color: Colors.grey),
-                        ),
-                      ],
-                    ),
-                  ),
-                  TextButton.icon(
-                    icon: const Icon(Icons.play_circle_outline_rounded, size: 16, color: AppTheme.accentCyan),
-                    label: Text(isEn ? 'Test' : 'Tester', style: const TextStyle(color: AppTheme.accentCyan, fontWeight: FontWeight.bold, fontSize: 12)),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const CallScreeningDemoPage()),
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
 
             // Compteurs statistiques d'activité locale & télémétrie moteur
             Row(
@@ -848,17 +791,8 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
             const TelecomSecurityTipCard(),
             const SizedBox(height: 24),
 
-            // Diagnostic et niveau de sécurité (masqué en mode aînés pour une clarté maximale)
+            // Engagement communautaire citoyen (masqué en mode aînés pour une clarté maximale)
             if (!isSeniorMode) ...[
-              SerenityScoreCard(
-                result: serenityResult,
-                onOpenSettings: () {
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsPage()));
-                },
-              ),
-              const SizedBox(height: 16),
-
-              // Engagement communautaire citoyen
               impactAsync.maybeWhen(
                 data: (impactData) => CitizenImpactCard(
                   data: impactData,

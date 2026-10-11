@@ -84,8 +84,9 @@ final callScreeningServiceProvider = Provider<CallScreeningService>((ref) => Cal
 /// Notifier pour l'état d'activation de la protection native Android
 class ProtectionNotifier extends StateNotifier<AsyncValue<bool>> {
   final CallScreeningService _screeningService;
+  final Ref? _ref;
 
-  ProtectionNotifier(this._screeningService) : super(const AsyncValue.data(true)) {
+  ProtectionNotifier(this._screeningService, [this._ref]) : super(const AsyncValue.data(true)) {
     checkStatus();
   }
 
@@ -93,13 +94,12 @@ class ProtectionNotifier extends StateNotifier<AsyncValue<bool>> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final userAutoBlock = prefs.getBool('settings_auto_block') ?? true;
-      final userSms = prefs.getBool('settings_sms_analysis') ?? true;
       final nativeActive = await _screeningService.isCallScreeningActive();
       final phoneGranted = await Permission.phone.isGranted;
 
-      // La protection sur l'accueil est active si les autorisations sont accordées
-      // et que les fonctionnalités de filtrage (appels et SMS) sont activées.
-      final isProtected = (nativeActive || phoneGranted) && userAutoBlock && userSms;
+      // La protection sur l'accueil est active si le filtrage natif/permission est actif
+      // et que le blocage automatique est activé.
+      final isProtected = (nativeActive && phoneGranted) && userAutoBlock;
       state = AsyncValue.data(isProtected);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
@@ -109,18 +109,21 @@ class ProtectionNotifier extends StateNotifier<AsyncValue<bool>> {
   Future<bool> requestPermission() async {
     state = const AsyncValue.loading();
     try {
-      // Permission système standard pour l'état d'appel (READ_PHONE_STATE)
+      // Permissions système requises (Téléphone, Contacts pour le filtre VIP, SMS)
       final phoneStatus = await Permission.phone.request();
+      await Permission.contacts.request();
+      await Permission.sms.request();
 
-      // Dialogue système Android Telecom pour accorder le rôle ROLE_CALL_SCREENING
+      // Dialogue système Android Telecom pour accorder le rôle officiel ROLE_CALL_SCREENING
       final roleGranted = await _screeningService.requestCallScreeningRole();
 
       // Active les protections associées dans les préférences de l'application
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('settings_auto_block', true);
       await prefs.setBool('settings_sms_analysis', true);
+      await _ref?.read(appSettingsProvider.notifier).refresh();
 
-      final isNowActive = roleGranted || phoneStatus.isGranted;
+      final isNowActive = roleGranted && phoneStatus.isGranted;
       state = AsyncValue.data(isNowActive);
       return isNowActive;
     } catch (e, st) {
@@ -132,12 +135,14 @@ class ProtectionNotifier extends StateNotifier<AsyncValue<bool>> {
   Future<void> updateAutoBlock(bool enabled) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('settings_auto_block', enabled);
+    await _ref?.read(appSettingsProvider.notifier).refresh();
     await checkStatus();
   }
 
   Future<void> updateSmsAnalysis(bool enabled) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('settings_sms_analysis', enabled);
+    await _ref?.read(appSettingsProvider.notifier).refresh();
     await checkStatus();
   }
 
@@ -145,6 +150,7 @@ class ProtectionNotifier extends StateNotifier<AsyncValue<bool>> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('settings_auto_block', false);
     await prefs.setBool('settings_sms_analysis', false);
+    await _ref?.read(appSettingsProvider.notifier).refresh();
     state = const AsyncValue.data(false);
   }
 
@@ -160,7 +166,7 @@ class ProtectionNotifier extends StateNotifier<AsyncValue<bool>> {
 
 /// Provider pour observer le statut de protection globale
 final protectionStatusProvider = StateNotifierProvider<ProtectionNotifier, AsyncValue<bool>>((ref) {
-  return ProtectionNotifier(ref.watch(callScreeningServiceProvider));
+  return ProtectionNotifier(ref.watch(callScreeningServiceProvider), ref);
 });
 
 /// Notifier pour le mode Contacts Uniquement (VIP Allowlist)
@@ -273,6 +279,8 @@ class AppSettingsNotifier extends StateNotifier<AppSettingsState> {
     await prefs.setBool('settings_senior_mode', enabled);
     state = state.copyWith(seniorMode: enabled);
   }
+
+  Future<void> refresh() => _loadSettings();
 }
 
 /// Provider pour les réglages globaux de sécurité

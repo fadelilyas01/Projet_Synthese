@@ -36,6 +36,8 @@ class AiAnalysisResult {
   final bool isTollFreeAbuse;
   final bool isLowEntropyPattern;
   final bool isInstitutionalExempt;
+  final bool isWangiriTrap;
+  final bool isArithmeticPattern;
   final double confidenceScore; // 0.0 à 1.0 (indice de certitude statistique)
   final String? clusterRegion;
   final String recommendation;
@@ -51,6 +53,8 @@ class AiAnalysisResult {
     required this.isTollFreeAbuse,
     required this.isLowEntropyPattern,
     this.isInstitutionalExempt = false,
+    this.isWangiriTrap = false,
+    this.isArithmeticPattern = false,
     this.confidenceScore = 0.90,
     this.clusterRegion,
     required this.recommendation,
@@ -104,6 +108,75 @@ class AiThreatPredictor {
         nationalDigits.startsWith('18009598281') || // ARC particuliers
         nationalDigits.startsWith('18002676299')) { // Revenu Québec
       return true;
+    }
+    return false;
+  }
+
+  /// Préfixes et codes pays associés aux fraudes Wangiri (appels en absence surtaxés)
+  static const Set<String> _wangiriHighRiskCountryCodes = {
+    '247', // Île de l'Ascension
+    '290', // Sainte-Hélène
+    '881', // Globalstar / Iridium Satellite
+    '882', '883', // Réseaux internationaux de télécommunications
+    '870', // Inmarsat maritime
+    '676', // Tonga
+    '685', // Samoa
+    '674', // Nauru
+    '688', // Tuvalu
+    '682', // Îles Cook
+    '232', // Sierra Leone
+    '252', // Somalie
+    '220', // Gambie
+    '235', // Tchad
+    '245', // Guinée-Bissau
+    '269', // Comores
+    '387', // Bosnie (plages surtaxées)
+    '371', // Lettonie (plages surtaxées)
+  };
+
+  /// Détecte si un numéro international correspond à un piège Wangiri à rappel surtaxé
+  static bool isWangiriScamTrap(String rawNumber) {
+    final clean = CryptoUtils.normalizePhoneNumber(rawNumber).replaceAll(RegExp(r'\D'), '');
+    for (final prefix in _wangiriHighRiskCountryCodes) {
+      if (clean.startsWith(prefix)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /// Détecte si le numéro comporte une suite arithmétique évidente (croissante, décroissante ou bloc répété)
+  static bool hasArithmeticSequence(String nationalDigits) {
+    if (nationalDigits.length < 5) return false;
+    for (int i = 0; i <= nationalDigits.length - 5; i++) {
+      bool isAscending = true;
+      bool isDescending = true;
+      for (int j = 0; j < 4; j++) {
+        final d1 = int.tryParse(nationalDigits[i + j]) ?? -1;
+        final d2 = int.tryParse(nationalDigits[i + j + 1]) ?? -1;
+        if (d2 != d1 + 1) isAscending = false;
+        if (d2 != d1 - 1) isDescending = false;
+      }
+      if (isAscending) {
+        final slice = nationalDigits.substring(i, i + 5);
+        if (slice == '01234') {
+          // Évite le faux positif sur les numéros légitimes XXX-XX0-1234
+          if (i + 5 < nationalDigits.length && nationalDigits[i + 5] == '5') {
+            return true;
+          }
+        } else {
+          return true;
+        }
+      }
+      if (isDescending) return true;
+    }
+    // Blocs répétitifs (ex: 4 chiffres identiques d'affilée)
+    for (int i = 0; i <= nationalDigits.length - 4; i++) {
+      if (nationalDigits[i] == nationalDigits[i + 1] &&
+          nationalDigits[i] == nationalDigits[i + 2] &&
+          nationalDigits[i] == nationalDigits[i + 3]) {
+        return true;
+      }
     }
     return false;
   }
@@ -253,16 +326,29 @@ class AiThreatPredictor {
     // 1. Modèle d'Évaluation des Risques (Log-Odds / Poids Bayésiens Pondérés)
     double riskWeight = 0.0;
     double confidence = 0.85;
+    bool isWangiri = false;
+    bool isArithmetic = false;
 
     // A. Analyse du format & Zone NANP (+1)
     if (!normalized.startsWith('+1')) {
-      riskWeight += 45.0;
-      threats.add('Numéro international hors Amérique du Nord (+1)');
-      factors.add(const AiRiskFactor(
-        factorName: 'Format Hors-Zone NANP',
-        scoreContribution: 45,
-        description: 'Origine internationale hors Canada/États-Unis.',
-      ));
+      isWangiri = isWangiriScamTrap(incomingNumber);
+      if (isWangiri) {
+        riskWeight += 70.0;
+        threats.add('Arnaque Wangiri : Numéro international à rappel surtaxé');
+        factors.add(const AiRiskFactor(
+          factorName: 'Piège Wangiri (Rappel Surtaxé)',
+          scoreContribution: 70,
+          description: 'Destination internationale surtaxée. Ne rappelez sous aucun prétexte.',
+        ));
+      } else {
+        riskWeight += 45.0;
+        threats.add('Numéro international hors Amérique du Nord (+1)');
+        factors.add(const AiRiskFactor(
+          factorName: 'Format Hors-Zone NANP',
+          scoreContribution: 45,
+          description: 'Origine internationale hors Canada/États-Unis.',
+        ));
+      }
     }
 
     // B. Détection d'anomalie de structure (Format VoIP non conforme)
@@ -335,7 +421,7 @@ class AiThreatPredictor {
       }
     }
 
-    // E. Calcul d'Entropie de Shannon
+    // E. Calcul d'Entropie de Shannon et Suites Arithmétiques
     if (digitsOnly.length == 11) {
       final nationalDigits = digitsOnly.substring(1);
       final entropy = calculateDigitEntropy(nationalDigits);
@@ -347,6 +433,17 @@ class AiThreatPredictor {
           factorName: 'Entropie Artificielle (${entropy.toStringAsFixed(2)})',
           scoreContribution: 25,
           description: 'Diversité de chiffres anormalement basse, typique des générateurs automatiques.',
+        ));
+      }
+
+      if (hasArithmeticSequence(nationalDigits)) {
+        isArithmetic = true;
+        riskWeight += 25.0;
+        threats.add('Progression arithmétique ou bloc répétitif artificiel');
+        factors.add(const AiRiskFactor(
+          factorName: 'Motif Arithmétique Artificiel',
+          scoreContribution: 25,
+          description: 'Suite ordonnée ou bloc de répétition caractéristique d\'un composeur VoIP.',
         ));
       }
     }
@@ -395,7 +492,9 @@ class AiThreatPredictor {
 
     if (finalScore >= 75) {
       level = AiRiskLevel.dangerous;
-      recommendation = 'Interception et blocage automatique conseillés. Risque élevé de fraude.';
+      recommendation = isWangiri
+          ? 'Piège Wangiri : Ne rappelez surtout pas ce numéro international surtaxé.'
+          : 'Interception et blocage automatique conseillés. Risque élevé de fraude.';
     } else if (finalScore >= 26) {
       level = AiRiskLevel.suspicious;
       recommendation = 'Avertissement visuel. Décrochez avec prudence et ne communiquez aucune information personnelle.';
@@ -415,6 +514,8 @@ class AiThreatPredictor {
       isTollFreeAbuse: tollFreeAbuse,
       isLowEntropyPattern: lowEntropyPattern,
       isInstitutionalExempt: institutionalExempt,
+      isWangiriTrap: isWangiri,
+      isArithmeticPattern: isArithmetic,
       confidenceScore: confidence,
       clusterRegion: clusterName,
       recommendation: recommendation,

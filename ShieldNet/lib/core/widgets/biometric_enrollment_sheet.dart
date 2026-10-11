@@ -53,8 +53,12 @@ class _BiometricEnrollmentSheetState extends State<BiometricEnrollmentSheet> {
 
   Future<void> _enableBiometrics() async {
     setState(() => _isLoading = true);
+    final isEn = mounted ? Localizations.localeOf(context).languageCode == 'en' : false;
     final authenticated = await _biometricService.authenticate(
-      reason: 'Confirmez votre empreinte ou Face ID pour activer le déverrouillage ShieldNet',
+      reason: isEn
+          ? 'Confirm your fingerprint or Face ID to enable ShieldNet unlock'
+          : 'Confirmez votre empreinte ou Face ID pour activer le déverrouillage ShieldNet',
+      biometricOnly: true,
     );
 
     if (authenticated) {
@@ -66,14 +70,16 @@ class _BiometricEnrollmentSheetState extends State<BiometricEnrollmentSheet> {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Row(
+            content: Row(
               children: [
-                Icon(Icons.fingerprint_rounded, color: Colors.white),
-                SizedBox(width: 10),
+                const Icon(Icons.fingerprint_rounded, color: Colors.white),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'Protection biométrique activée avec succès !',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                    isEn
+                        ? 'Biometric protection successfully enabled!'
+                        : 'Protection biométrique activée avec succès !',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
               ],
@@ -88,6 +94,17 @@ class _BiometricEnrollmentSheetState extends State<BiometricEnrollmentSheet> {
     } else {
       if (mounted) {
         setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              isEn
+                  ? 'Biometric verification cancelled or not recognized. Try again.'
+                  : 'Vérification biométrique annulée ou non reconnue. Réessayez.',
+            ),
+            backgroundColor: AppTheme.accentOrange,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
     }
   }
@@ -105,6 +122,7 @@ class _BiometricEnrollmentSheetState extends State<BiometricEnrollmentSheet> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isEn = Localizations.localeOf(context).languageCode == 'en';
     final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
 
     return Container(
@@ -151,7 +169,7 @@ class _BiometricEnrollmentSheetState extends State<BiometricEnrollmentSheet> {
 
           // Titre
           Text(
-            'Activer la protection biométrique',
+            isEn ? 'Enable Biometric Protection' : 'Activer la protection biométrique',
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -164,7 +182,9 @@ class _BiometricEnrollmentSheetState extends State<BiometricEnrollmentSheet> {
 
           // Description claire et professionnelle
           Text(
-            'Déverrouillez ShieldNet instantanément avec Face ID ou votre empreinte digitale lors de vos prochaines visites, sans avoir à ressaisir vos identifiants.',
+            isEn
+                ? 'Unlock ShieldNet instantly with Face ID or your fingerprint on your next visits, without having to re-enter your credentials.'
+                : 'Déverrouillez ShieldNet instantanément avec Face ID ou votre empreinte digitale lors de vos prochaines visites, sans avoir à ressaisir vos identifiants.',
             style: TextStyle(
               fontSize: 14,
               height: 1.45,
@@ -181,7 +201,9 @@ class _BiometricEnrollmentSheetState extends State<BiometricEnrollmentSheet> {
                 ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                 : const Icon(Icons.security_rounded, size: 20),
             label: Text(
-              _isLoading ? 'Activation en cours...' : 'Activer maintenant',
+              _isLoading
+                  ? (isEn ? 'Enabling...' : 'Activation en cours...')
+                  : (isEn ? 'Enable now' : 'Activer maintenant'),
               style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
             ),
             style: ElevatedButton.styleFrom(
@@ -198,7 +220,7 @@ class _BiometricEnrollmentSheetState extends State<BiometricEnrollmentSheet> {
           TextButton(
             onPressed: _isLoading ? null : _skipForNow,
             child: Text(
-              'Plus tard',
+              isEn ? 'Maybe later' : 'Plus tard',
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,

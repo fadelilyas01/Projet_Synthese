@@ -115,16 +115,14 @@ void main() {
       expect(count, 1);
     });
 
-    test('Sync échouée (erreur réseau) retourne 0 sans lancer d\'exception', () async {
+    test('Sync échouée (erreur réseau) propage l\'exception pour gestion en amont', () async {
       when(() => mockDio.get('blacklist/', queryParameters: any(named: 'queryParameters')))
           .thenThrow(DioException(
         type: DioExceptionType.connectionError,
         requestOptions: RequestOptions(path: 'blacklist/'),
       ));
 
-      final count = await apiService.syncBlacklistWithBackend();
-
-      expect(count, 0);
+      expect(() => apiService.syncBlacklistWithBackend(), throwsA(isA<DioException>()));
     });
   });
 

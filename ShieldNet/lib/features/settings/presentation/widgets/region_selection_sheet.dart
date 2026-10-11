@@ -318,10 +318,9 @@ class _RegionSelectionSheetState extends ConsumerState<RegionSelectionSheet> {
                   await ref.read(regionalComplianceProvider.notifier).setRegion(
                         country: _selectedCountry,
                         provinceOrState: _selectedProvince,
-                        currentUser: user,
                       );
                   if (user != null) {
-                    ref.read(authNotifierProvider.notifier).updateRegion(_selectedCountry, _selectedProvince);
+                    await ref.read(authNotifierProvider.notifier).updateRegion(_selectedCountry, _selectedProvince);
                   }
                   if (context.mounted) {
                     Navigator.pop(context);

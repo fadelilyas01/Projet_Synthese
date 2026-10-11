@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/providers/app_providers.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/services/emergency_whitelist_service.dart';
 import '../../../../core/database/database_helper.dart';
@@ -265,6 +266,7 @@ class _EmergencyWhitelistPageState extends ConsumerState<EmergencyWhitelistPage>
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(localeProvider);
     final state = ref.watch(emergencyWhitelistProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final l10n = AppLocalizations.of(context);

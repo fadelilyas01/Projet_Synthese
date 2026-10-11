@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/providers/app_providers.dart';
 import '../../../../core/services/observability_service.dart';
 
-class ObservabilityPage extends StatefulWidget {
+class ObservabilityPage extends ConsumerStatefulWidget {
   const ObservabilityPage({super.key});
 
   @override
-  State<ObservabilityPage> createState() => _ObservabilityPageState();
+  ConsumerState<ObservabilityPage> createState() => _ObservabilityPageState();
 }
 
-class _ObservabilityPageState extends State<ObservabilityPage> {
+class _ObservabilityPageState extends ConsumerState<ObservabilityPage> {
   Map<String, int> _usageStats = {};
   List<StructuredFeedback> _feedbacks = [];
   bool _isLoading = true;
@@ -33,6 +35,7 @@ class _ObservabilityPageState extends State<ObservabilityPage> {
   }
 
   void _showFeedbackModal() {
+    final isEn = ref.read(localeProvider).languageCode == 'en';
     int selectedRating = 5;
     String selectedCategory = 'Satisfaction';
     final commentController = TextEditingController();
@@ -69,9 +72,9 @@ class _ObservabilityPageState extends State<ObservabilityPage> {
                         child: const Icon(Icons.rate_review, color: Colors.amber, size: 24),
                       ),
                       const SizedBox(width: 12),
-                      const Text(
-                        'Retour Utilisateur Structuré',
-                        style: TextStyle(
+                      Text(
+                        isEn ? 'Structured User Feedback' : 'Retour Utilisateur Structuré',
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -80,9 +83,9 @@ class _ObservabilityPageState extends State<ObservabilityPage> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  const Text(
-                    'Votre évaluation globale :',
-                    style: TextStyle(color: Colors.white70, fontSize: 13),
+                  Text(
+                    isEn ? 'Your overall rating:' : 'Votre évaluation globale :',
+                    style: const TextStyle(color: Colors.white70, fontSize: 13),
                   ),
                   const SizedBox(height: 8),
                   Row(
@@ -102,9 +105,9 @@ class _ObservabilityPageState extends State<ObservabilityPage> {
                     }),
                   ),
                   const SizedBox(height: 16),
-                  const Text(
-                    'Catégorie de retour :',
-                    style: TextStyle(color: Colors.white70, fontSize: 13),
+                  Text(
+                    isEn ? 'Feedback category:' : 'Catégorie de retour :',
+                    style: const TextStyle(color: Colors.white70, fontSize: 13),
                   ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
@@ -119,11 +122,23 @@ class _ObservabilityPageState extends State<ObservabilityPage> {
                         borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
                       ),
                     ),
-                    items: const [
-                      DropdownMenuItem(value: 'Satisfaction', child: Text('Expérience globale & Satisfaction')),
-                      DropdownMenuItem(value: 'Bug', child: Text('Anomalie / Bug rencontré')),
-                      DropdownMenuItem(value: 'Suggestion', child: Text('Suggestion d\'amélioration')),
-                      DropdownMenuItem(value: 'Prise en main', child: Text('Ergonomie / Prise en main')),
+                    items: [
+                      DropdownMenuItem(
+                        value: 'Satisfaction',
+                        child: Text(isEn ? 'Overall experience & Satisfaction' : 'Expérience globale & Satisfaction'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'Bug',
+                        child: Text(isEn ? 'Issue / Bug encountered' : 'Anomalie / Bug rencontré'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'Suggestion',
+                        child: Text(isEn ? 'Improvement suggestion' : 'Suggestion d\'amélioration'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'Prise en main',
+                        child: Text(isEn ? 'Ergonomics / Ease of use' : 'Ergonomie / Prise en main'),
+                      ),
                     ],
                     onChanged: (val) {
                       if (val != null) setModalState(() => selectedCategory = val);
@@ -135,7 +150,9 @@ class _ObservabilityPageState extends State<ObservabilityPage> {
                     maxLines: 3,
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
-                      hintText: 'Vos remarques, difficultés ou suggestions pour le jury...',
+                      hintText: isEn
+                          ? 'Your remarks, difficulties, or suggestions...'
+                          : 'Vos remarques, difficultés ou suggestions...',
                       hintStyle: const TextStyle(color: Colors.white38, fontSize: 13),
                       filled: true,
                       fillColor: const Color(0xFF0F172A),
@@ -156,7 +173,10 @@ class _ObservabilityPageState extends State<ObservabilityPage> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                       icon: const Icon(Icons.send, size: 18),
-                      label: const Text('Transmettre mon avis', style: TextStyle(fontWeight: FontWeight.bold)),
+                      label: Text(
+                        isEn ? 'Submit my feedback' : 'Transmettre mon avis',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
                       onPressed: () async {
                         final comment = commentController.text.trim();
                         final nav = Navigator.of(context);
@@ -165,15 +185,19 @@ class _ObservabilityPageState extends State<ObservabilityPage> {
                         await ObservabilityService.instance.submitStructuredFeedback(
                           rating: selectedRating,
                           category: selectedCategory,
-                          comment: comment.isEmpty ? 'Évaluation rapide' : comment,
+                          comment: comment.isEmpty ? (isEn ? 'Quick evaluation' : 'Évaluation rapide') : comment,
                         );
 
                         if (!mounted) return;
                         nav.pop();
                         _loadData();
                         messenger.showSnackBar(
-                          const SnackBar(
-                            content: Text('Merci ! Votre avis structuré a été enregistré avec succès.'),
+                          SnackBar(
+                            content: Text(
+                              isEn
+                                  ? 'Thank you! Your structured feedback has been recorded.'
+                                  : 'Merci ! Votre avis structuré a été enregistré avec succès.',
+                            ),
                             backgroundColor: Colors.green,
                           ),
                         );
@@ -191,36 +215,55 @@ class _ObservabilityPageState extends State<ObservabilityPage> {
 
   @override
   Widget build(BuildContext context) {
-    const featureLabels = {
-      'sms_inspection': 'Analyseur de SMS frauduleux',
-      'call_screening_demo': 'Simulateur d\'appels natif',
-      'compliance_check': 'Consultation Conformité Loi 25',
-      'threat_map_view': 'Carte des menaces régionales',
-      'whitelist_addition': 'Ajout en Liste Blanche',
-      'dispute_filed': 'Contestation faux-positif',
-      'offline_sync': 'Synchronisation Delta locale',
-    };
+    ref.watch(localeProvider);
+    final isEn = ref.watch(localeProvider).languageCode == 'en';
+
+    final featureLabels = isEn
+        ? {
+            'sms_inspection': 'Fraudulent SMS Inspector',
+            'call_screening_demo': 'Native Call Screening Demo',
+            'compliance_check': 'Law 25 Compliance Check',
+            'threat_map_view': 'Regional Threat Heatmap',
+            'whitelist_addition': 'Whitelist Addition',
+            'dispute_filed': 'False-Positive Dispute',
+            'offline_sync': 'Local Delta Sync',
+          }
+        : {
+            'sms_inspection': 'Analyseur de SMS frauduleux',
+            'call_screening_demo': 'Simulateur d\'appels natif',
+            'compliance_check': 'Consultation Conformité Loi 25',
+            'threat_map_view': 'Carte des menaces régionales',
+            'whitelist_addition': 'Ajout en Liste Blanche',
+            'dispute_filed': 'Contestation faux-positif',
+            'offline_sync': 'Synchronisation Delta locale',
+          };
 
     final totalUsage = _usageStats.values.fold<int>(0, (sum, count) => sum + count);
 
     return Scaffold(
       backgroundColor: const Color(0xFF0F172A),
       appBar: AppBar(
-        title: const Text('Observabilité & Adoption', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        title: Text(
+          isEn ? 'Observability & Adoption' : 'Observabilité & Adoption',
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+        ),
         backgroundColor: const Color(0xFF1E293B),
         elevation: 0,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadData,
-            tooltip: 'Actualiser',
+            tooltip: isEn ? 'Refresh' : 'Actualiser',
           ),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: Colors.blueAccent,
         icon: const Icon(Icons.rate_review, color: Colors.white),
-        label: const Text('Donner un avis', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        label: Text(
+          isEn ? 'Leave feedback' : 'Donner un avis',
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
         onPressed: _showFeedbackModal,
       ),
       body: _isLoading
@@ -256,17 +299,19 @@ class _ObservabilityPageState extends State<ObservabilityPage> {
                               child: const Icon(Icons.insights, color: Colors.cyan, size: 24),
                             ),
                             const SizedBox(width: 12),
-                            const Expanded(
+                            Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Observabilité & Adoption',
-                                    style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                                    isEn ? 'Observability & Adoption' : 'Observabilité & Adoption',
+                                    style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
                                   ),
                                   Text(
-                                    'Métriques anonymes conformes Loi 25 (Sans PII)',
-                                    style: TextStyle(color: Colors.white54, fontSize: 12),
+                                    isEn
+                                        ? 'Anonymous Law 25 compliant metrics (Zero PII)'
+                                        : 'Métriques anonymes conformes Loi 25 (Sans PII)',
+                                    style: const TextStyle(color: Colors.white54, fontSize: 12),
                                   ),
                                 ],
                               ),
@@ -278,7 +323,7 @@ class _ObservabilityPageState extends State<ObservabilityPage> {
                           children: [
                             Expanded(
                               child: _buildMetricTile(
-                                label: 'Actions mesurées',
+                                label: isEn ? 'Measured actions' : 'Actions mesurées',
                                 value: '$totalUsage',
                                 icon: Icons.touch_app,
                                 color: Colors.cyan,
@@ -287,7 +332,7 @@ class _ObservabilityPageState extends State<ObservabilityPage> {
                             const SizedBox(width: 12),
                             Expanded(
                               child: _buildMetricTile(
-                                label: 'Retours recueillis',
+                                label: isEn ? 'Feedbacks collected' : 'Retours recueillis',
                                 value: '${_feedbacks.length}',
                                 icon: Icons.rate_review,
                                 color: Colors.amber,
@@ -302,9 +347,9 @@ class _ObservabilityPageState extends State<ObservabilityPage> {
                   const SizedBox(height: 24),
 
                   // Section Fonctionnalités les plus utilisées
-                  const Text(
-                    'UTILISATION DES FONCTIONNALITÉS',
-                    style: TextStyle(
+                  Text(
+                    isEn ? 'FEATURE USAGE' : 'UTILISATION DES FONCTIONNALITÉS',
+                    style: const TextStyle(
                       color: Colors.white54,
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
@@ -335,7 +380,7 @@ class _ObservabilityPageState extends State<ObservabilityPage> {
                                       style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
                                     ),
                                     Text(
-                                      '$count fois (${(fraction * 100).toStringAsFixed(0)}%)',
+                                      '$count ${isEn ? "times" : "fois"} (${(fraction * 100).toStringAsFixed(0)}%)',
                                       style: const TextStyle(color: Colors.cyanAccent, fontSize: 12, fontWeight: FontWeight.bold),
                                     ),
                                   ],
@@ -364,9 +409,9 @@ class _ObservabilityPageState extends State<ObservabilityPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        'RETOURS UTILISATEURS STRUCTURÉS',
-                        style: TextStyle(
+                      Text(
+                        isEn ? 'STRUCTURED USER FEEDBACK' : 'RETOURS UTILISATEURS STRUCTURÉS',
+                        style: const TextStyle(
                           color: Colors.white54,
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
@@ -375,7 +420,7 @@ class _ObservabilityPageState extends State<ObservabilityPage> {
                       ),
                       TextButton.icon(
                         icon: const Icon(Icons.add, size: 16),
-                        label: const Text('Ajouter'),
+                        label: Text(isEn ? 'Add' : 'Ajouter'),
                         onPressed: _showFeedbackModal,
                       ),
                     ],
@@ -386,19 +431,25 @@ class _ObservabilityPageState extends State<ObservabilityPage> {
                     Card(
                       color: const Color(0xFF1E293B),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      child: const Padding(
-                        padding: EdgeInsets.all(24),
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
                         child: Center(
                           child: Text(
-                            'Aucun avis soumis pour le moment.\nUtilisez le bouton ci-dessous pour tester le recueil.',
+                            isEn
+                                ? 'No feedback submitted yet.\nUse the button below to test collection.'
+                                : 'Aucun avis soumis pour le moment.\nUtilisez le bouton ci-dessous pour tester le recueil.',
                             textAlign: TextAlign.center,
-                            style: TextStyle(color: Colors.white38, fontSize: 13),
+                            style: const TextStyle(color: Colors.white38, fontSize: 13),
                           ),
                         ),
                       ),
                     )
                   else
                     ..._feedbacks.reversed.map((fb) {
+                      String displayedCategory = fb.category;
+                      if (isEn) {
+                        if (fb.category == 'Prise en main') displayedCategory = 'Ease of use';
+                      }
                       return Card(
                         color: const Color(0xFF1E293B),
                         margin: const EdgeInsets.only(bottom: 10),
@@ -419,7 +470,7 @@ class _ObservabilityPageState extends State<ObservabilityPage> {
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Text(
-                                  fb.category,
+                                  displayedCategory,
                                   style: const TextStyle(color: Colors.blueAccent, fontSize: 11, fontWeight: FontWeight.bold),
                                 ),
                               ),

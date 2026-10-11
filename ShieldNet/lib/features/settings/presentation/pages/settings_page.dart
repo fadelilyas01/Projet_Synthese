@@ -17,10 +17,8 @@ import '../widgets/region_selection_sheet.dart';
 import 'faq_page.dart';
 import '../../../../core/widgets/app_logo.dart';
 import '../../../../core/services/biometric_service.dart';
-import '../../../../core/services/demo_mode_service.dart';
-import '../../../call_filtering/presentation/pages/call_screening_demo_page.dart';
 import 'legal_compliance_page.dart';
-import 'observability_page.dart';
+import '../../../call_filtering/presentation/controllers/blacklist_controller.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -34,33 +32,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   final BiometricService _biometricService = BiometricService();
   bool _biometricEnabled = false;
   bool _biometricAvailable = false;
-  bool _isDemoMode = DemoModeService.instance.isDemoActive;
 
   @override
   void initState() {
     super.initState();
     _initBiometrics();
-    _isDemoMode = DemoModeService.instance.isDemoActive;
-  }
-
-  Future<void> _toggleDemoMode(bool val) async {
-    if (val) {
-      await DemoModeService.instance.enableDemoMode();
-    } else {
-      await DemoModeService.instance.disableDemoMode();
-    }
-    if (mounted) {
-      setState(() => _isDemoMode = val);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(val
-              ? 'Mode Démo activé : données réalistes chargées (15 numéros, scénarios).'
-              : 'Mode Démo désactivé : retour à l\'état standard.'),
-          backgroundColor: val ? AppTheme.accentCyan : AppTheme.primaryColor,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
   }
 
   Future<void> _initBiometrics() async {
@@ -75,17 +51,75 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   }
 
   Future<void> _toggleBiometric(bool val) async {
+    final isEn = mounted ? Localizations.localeOf(context).languageCode == 'en' : false;
     if (val) {
+      final available = await _biometricService.isBiometricsAvailable();
+      if (!available) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                isEn
+                    ? 'No biometric hardware or enrolled fingerprint found. Please configure a fingerprint in your phone Settings first.'
+                    : 'Aucune biométrie enregistrée sur l\'appareil. Veuillez d\'abord configurer une empreinte dans les Paramètres de votre téléphone.',
+              ),
+              backgroundColor: AppTheme.accentOrange,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+        return;
+      }
       final authenticated = await _biometricService.authenticate(
-        reason: 'Authentifiez-vous pour activer la protection biométrique',
+        reason: isEn
+            ? 'Authenticate to enable biometric protection'
+            : 'Authentifiez-vous pour activer la protection biométrique',
+        biometricOnly: true,
       );
       if (authenticated) {
         await _biometricService.setBiometricEnabled(true);
         if (mounted) setState(() => _biometricEnabled = true);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                isEn
+                    ? 'Biometric verification failed or cancelled.'
+                    : 'Échec ou annulation de la vérification biométrique.',
+              ),
+              backgroundColor: AppTheme.accentRed,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
       }
     } else {
-      await _biometricService.setBiometricEnabled(false);
-      if (mounted) setState(() => _biometricEnabled = false);
+      // Exiger l'authentification biométrique AVANT de permettre la désactivation
+      final authenticated = await _biometricService.authenticate(
+        reason: isEn
+            ? 'Confirm your identity to disable biometric protection'
+            : 'Confirmez votre identité pour désactiver la protection biométrique',
+        biometricOnly: true,
+      );
+      if (authenticated) {
+        await _biometricService.setBiometricEnabled(false);
+        if (mounted) setState(() => _biometricEnabled = false);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                isEn
+                    ? 'Deactivation cancelled: identity not verified.'
+                    : 'Désactivation annulée : identité non confirmée.',
+              ),
+              backgroundColor: AppTheme.accentRed,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
     }
   }
 
@@ -94,6 +128,18 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       final status = await Permission.phone.request();
       if (status.isGranted) {
         await ref.read(appSettingsProvider.notifier).setAutoBlock(true);
+      } else {
+        if (mounted) {
+          final isEn = ref.read(localeProvider).languageCode == 'en';
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(isEn
+                  ? 'Phone permission required to block calls automatically.'
+                  : 'Permission téléphone requise pour le filtrage automatique.'),
+              backgroundColor: AppTheme.accentOrange,
+            ),
+          );
+        }
       }
     } else {
       await ref.read(appSettingsProvider.notifier).setAutoBlock(false);
@@ -151,6 +197,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     try {
       final res = await OfflineSyncService.instance.flushQueue();
       ref.invalidate(offlineQueueCountProvider);
+      ref.invalidate(citizenImpactProvider);
+      await ref.read(blacklistControllerProvider.notifier).loadBlacklist();
       if (mounted) {
         setState(() => _isSyncing = false);
         final isEn = ref.read(localeProvider).languageCode == 'en';
@@ -187,12 +235,24 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     setState(() => _isSyncing = true);
     try {
       final count = await BackgroundSyncService.instance.syncNow();
+      await ref.read(blacklistControllerProvider.notifier).loadBlacklist();
+      ref.invalidate(offlineQueueCountProvider);
+      ref.invalidate(bloomFilterProvider);
+      ref.invalidate(citizenImpactProvider);
+
       if (mounted) {
         setState(() => _isSyncing = false);
         final isEn = ref.read(localeProvider).languageCode == 'en';
-        final defaultMsg = isEn ? 'Protection up to date: $count numbers synchronized.' : 'Protection à jour : $count numéros synchronisés.';
-        final detailMsg = l10n?.syncSuccessDetail;
-        final msg = detailMsg != null ? detailMsg.replaceAll('numéros', '$count numéros') : defaultMsg;
+        final String msg;
+        if (count > 0) {
+          msg = isEn
+              ? 'Protection updated: $count threat rule(s) synchronized.'
+              : 'Protection à jour : $count nouveau(x) numéro(s) synchronisé(s).';
+        } else {
+          msg = isEn
+              ? 'Protection up to date: your shields already have the latest rules.'
+              : 'Protection à jour : vos règles de filtrage sont déjà au niveau le plus récent.';
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(msg),
@@ -205,7 +265,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         setState(() => _isSyncing = false);
         final isEn = ref.read(localeProvider).languageCode == 'en';
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(isEn ? 'Network error: $e' : 'Erreur réseau: $e'), backgroundColor: AppTheme.accentRed),
+          SnackBar(
+            content: Text(isEn ? 'Network error: $e' : 'Erreur de connexion : $e'),
+            backgroundColor: AppTheme.accentRed,
+          ),
         );
       }
     }
@@ -282,13 +345,13 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 value: _biometricEnabled,
                 onChanged: _biometricAvailable ? _toggleBiometric : null,
                 title: Text(
-                  currentLocale.languageCode == 'en' ? 'Biometric Lock (Face ID / Fingerprint)' : 'Protection Biométrique (Face ID / Empreinte)',
+                  currentLocale.languageCode == 'en' ? 'App Lock (Face ID / Fingerprint)' : 'Verrouillage par Empreinte / Face ID',
                   style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                 ),
                 subtitle: Text(
                   _biometricAvailable
-                      ? (currentLocale.languageCode == 'en' ? 'Require biometric check for sensitive settings & admin' : 'Exiger la biométrie pour l\'accès d\'administration')
-                      : (currentLocale.languageCode == 'en' ? 'Biometric hardware unavailable' : 'Capteur biométrique non disponible'),
+                      ? (currentLocale.languageCode == 'en' ? 'Require fingerprint or Face ID to open ShieldNet' : 'Exiger votre empreinte ou visage pour ouvrir l\'application')
+                      : (currentLocale.languageCode == 'en' ? 'Biometric sensor unavailable on this device' : 'Capteur biométrique non configuré'),
                   style: const TextStyle(fontSize: 12, color: Colors.grey),
                 ),
                 secondary: const Icon(Icons.fingerprint_rounded, color: AppTheme.accentOrange, size: 24),
@@ -296,8 +359,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               const Divider(height: 1, indent: 56),
               ListTile(
                 leading: const Icon(Icons.mark_email_read_rounded, color: AppTheme.accentCyan, size: 24),
-                title: Text(l10n?.settingSmsInspector ?? 'Inspecteur de SMS & Liens', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                subtitle: Text(l10n?.settingSmsInspectorDesc ?? 'Analyser un message suspect ou un lien de livraison', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                title: Text(l10n?.settingSmsInspector ?? 'Vérificateur de SMS & Liens', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                subtitle: Text(l10n?.settingSmsInspectorDesc ?? 'Tester un message suspect ou un avis de colis douteux', style: const TextStyle(fontSize: 12, color: Colors.grey)),
                 trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.grey),
                 onTap: () {
                   Navigator.push(
@@ -309,12 +372,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               const Divider(height: 1, indent: 56),
               ListTile(
                 leading: const Icon(Icons.health_and_safety_rounded, color: AppTheme.accentGreen, size: 24),
-                title: Text(l10n?.settingEmergencyWhitelist ?? (currentLocale.languageCode == 'en' ? 'Emergency Numbers & Whitelist' : 'Numéros d\'Urgence & Liste Blanche'), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                title: Text(l10n?.settingEmergencyWhitelist ?? (currentLocale.languageCode == 'en' ? 'Emergency & Priority Contacts' : 'Numéros d\'Urgence & Contacts Protégés'), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
                 subtitle: Text(
                   l10n?.settingEmergencyWhitelistDesc ??
                       (currentLocale.languageCode == 'en'
-                          ? '911, 988 and guaranteed priority contacts'
-                          : '911, 811 et contacts autorisés prioritaires'),
+                          ? '911, 811 and your priority contacts are never blocked'
+                          : '911, 811 et vos proches prioritaires ne sont jamais bloqués'),
                   style: const TextStyle(fontSize: 12, color: Colors.grey),
                 ),
                 trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.grey),
@@ -329,17 +392,25 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               SwitchListTile(
                 value: settings.autoSync,
                 onChanged: _toggleAutoSync,
-                title: Text(l10n?.settingBgSync ?? 'Sync en arrière-plan', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                title: Text(currentLocale.languageCode == 'en' ? 'Automatic Protection' : 'Protection automatique en continu', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                subtitle: Text(
+                  currentLocale.languageCode == 'en' ? 'Silently keeps the security filters up to date in the background' : 'Met à jour la liste des menaces discrètement en arrière-plan',
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
                 secondary: const Icon(Icons.sync, color: AppTheme.primaryColor, size: 24),
               ),
               const Divider(height: 1, indent: 56),
               ListTile(
                 leading: const Icon(Icons.cloud_download, color: AppTheme.primaryColor, size: 24),
-                title: Text(l10n?.settingUpdateDb ?? 'Mettre à jour la base', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                title: Text(currentLocale.languageCode == 'en' ? 'Check for Updates' : 'Vérifier les mises à jour', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                subtitle: Text(
+                  currentLocale.languageCode == 'en' ? 'Download latest protections immediately' : 'Télécharger immédiatement les dernières protections',
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
                 trailing: _isSyncing
                     ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
                     : Text(
-                        l10n?.btnSync ?? 'Synchroniser',
+                        currentLocale.languageCode == 'en' ? 'Update' : 'Actualiser',
                         style: const TextStyle(color: AppTheme.primaryColor, fontSize: 13, fontWeight: FontWeight.bold),
                       ),
                 onTap: _isSyncing ? null : () => _syncNow(l10n),
@@ -348,8 +419,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           ),
           const SizedBox(height: 16),
 
-          // Résilience & File d'attente hors-ligne
-          _buildSectionHeader(l10n?.sectionOfflineResilience ?? (currentLocale.languageCode == 'en' ? 'OFFLINE SYNCHRONIZATION' : 'SYNCHRONISATION & HORS-LIGNE')),
+          // Résilience & Protection autonome hors-ligne
+          _buildSectionHeader(currentLocale.languageCode == 'en' ? 'AUTONOMOUS PROTECTION' : 'PROTECTION HORS-LIGNE'),
           _buildCard(
             cardBg: cardBg,
             borderColor: borderColor,
@@ -360,25 +431,27 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   final count = pendingCountAsync.value ?? 0;
                   return ListTile(
                     leading: Icon(
-                      count > 0 ? Icons.cloud_queue_rounded : Icons.cloud_done_rounded,
+                      count > 0 ? Icons.cloud_queue_rounded : Icons.shield_rounded,
                       color: count > 0 ? AppTheme.accentOrange : AppTheme.accentGreen,
                       size: 24,
                     ),
                     title: Text(
-                      l10n?.settingOfflineQueue ?? (currentLocale.languageCode == 'en' ? 'Pending offline reports' : 'Envois en attente de connexion'),
+                      count > 0
+                          ? (currentLocale.languageCode == 'en' ? 'Reports pending connection' : 'Envois en attente de connexion')
+                          : (currentLocale.languageCode == 'en' ? 'Autonomous Protection Active' : 'Protection autonome active'),
                       style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                     ),
                     subtitle: Text(
                       count > 0
-                          ? (l10n?.settingOfflineQueuePending(count) ?? (currentLocale.languageCode == 'en' ? '$count report(s) waiting to sync' : '$count signalement(s) en attente de réseau'))
-                          : (l10n?.settingOfflineQueueAllSynced ?? (currentLocale.languageCode == 'en' ? 'All reports and disputes are synchronized' : 'Toutes vos données sont synchronisées')),
+                          ? (currentLocale.languageCode == 'en' ? '$count report(s) will be sent as soon as Internet is back' : '$count signalement(s) seront transmis dès le retour d\'Internet')
+                          : (currentLocale.languageCode == 'en' ? 'ShieldNet blocks threats locally even without Internet or away from home' : 'ShieldNet bloque les menaces en continu même sans Internet ou hors de portée'),
                       style: const TextStyle(fontSize: 12, color: Colors.grey),
                     ),
                     trailing: count > 0
                         ? ElevatedButton.icon(
                             onPressed: _isSyncing ? null : _flushOfflineQueue,
                             icon: const Icon(Icons.upload_rounded, size: 14),
-                            label: Text(l10n?.localeName == 'en' ? 'Send' : 'Envoyer', style: const TextStyle(fontSize: 12)),
+                            label: Text(currentLocale.languageCode == 'en' ? 'Send' : 'Envoyer', style: const TextStyle(fontSize: 12)),
                             style: ElevatedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                               backgroundColor: AppTheme.accentOrange,
@@ -556,13 +629,13 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               ListTile(
                 leading: const Icon(Icons.verified_user_rounded, color: AppTheme.accentGreen, size: 24),
                 title: Text(
-                  currentLocale.languageCode == 'en' ? 'Legal Compliance & Ethics' : 'Conformité Loi 25 & Éthique',
+                  currentLocale.languageCode == 'en' ? 'Privacy & Data Protection' : 'Respect de votre vie privée',
                   style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                 ),
                 subtitle: Text(
                   currentLocale.languageCode == 'en'
-                      ? 'Zero address book collection, cryptographic hashing'
-                      : 'Zéro carnet d\'adresses collecté, chiffrement salé',
+                      ? 'No address book uploaded. Numbers remain strictly confidential'
+                      : 'Aucun partage de vos contacts. Vos numéros restent 100% privés',
                   style: const TextStyle(fontSize: 12, color: Colors.grey),
                 ),
                 trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.grey),
@@ -570,73 +643,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => const LegalCompliancePage()),
-                  );
-                },
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          // Démonstration Jury & Outils Avancés
-          _buildSectionHeader(currentLocale.languageCode == 'en' ? 'JURY DEMO & TOOLS' : 'DÉMONSTRATION JURY & OUTILS'),
-          _buildCard(
-            cardBg: cardBg,
-            borderColor: borderColor,
-            children: [
-              SwitchListTile(
-                value: _isDemoMode,
-                onChanged: _toggleDemoMode,
-                title: Text(
-                  currentLocale.languageCode == 'en' ? 'Jury Demo Mode' : 'Mode Démonstration Jury',
-                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-                ),
-                subtitle: Text(
-                  currentLocale.languageCode == 'en'
-                      ? 'Preloads realistic blocked numbers, logs, and fleet stats'
-                      : 'Charge 15 numéros réalistes, scénarios d\'appels et stats de flotte',
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-                secondary: const Icon(Icons.science_rounded, color: AppTheme.accentCyan, size: 24),
-              ),
-              const Divider(height: 1, indent: 56),
-              ListTile(
-                leading: const Icon(Icons.phone_locked_rounded, color: AppTheme.primaryColor, size: 24),
-                title: Text(
-                  currentLocale.languageCode == 'en' ? 'Native Call Screening Demo' : 'Simulateur de Filtrage d\'Appels',
-                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-                ),
-                subtitle: Text(
-                  currentLocale.languageCode == 'en'
-                      ? 'Real-time Android CallScreeningService interception logs'
-                      : 'Démonstration d\'interception < 3 ms sans sonnerie',
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.grey),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const CallScreeningDemoPage()),
-                  );
-                },
-              ),
-              const Divider(height: 1, indent: 56),
-              ListTile(
-                leading: const Icon(Icons.insights_rounded, color: Colors.cyan, size: 24),
-                title: Text(
-                  currentLocale.languageCode == 'en' ? 'User Observability & Feedback' : 'Observabilité & Retours Utilisateur',
-                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-                ),
-                subtitle: Text(
-                  currentLocale.languageCode == 'en'
-                      ? 'Adoption metrics and structured feedback system'
-                      : 'Mesure d\'adoption, fonctionnalités clés et avis structurés',
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.grey),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const ObservabilityPage()),
                   );
                 },
               ),
@@ -685,8 +691,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             const SizedBox(height: 16),
           ],
 
-          // Assistance, FAQ & Documentation Web — visible pour tous les utilisateurs
-          _buildSectionHeader(currentLocale.languageCode == 'en' ? 'HELP & DOCUMENTATION' : 'ASSISTANCE & DOCUMENTATION'),
+          // Assistance & FAQ
+          _buildSectionHeader(currentLocale.languageCode == 'en' ? 'HELP & SUPPORT' : 'ASSISTANCE'),
           _buildCard(
             cardBg: cardBg,
             borderColor: borderColor,
@@ -705,7 +711,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                 ),
                 subtitle: Text(
-                  l10n?.helpFaqSubtitle ?? 'Questions fréquentes, confidentialité et portail web',
+                  currentLocale.languageCode == 'en' ? 'Frequently asked questions and guides' : 'Questions fréquentes et fonctionnement',
                   style: const TextStyle(fontSize: 12, color: Colors.grey),
                 ),
                 trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.grey),
@@ -723,14 +729,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           // Informations de version et licence
           Center(
             child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 16.0),
+              padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 16.0),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const ShieldNetLogo(size: 32),
                   const SizedBox(height: 8),
                   Text(
-                    l10n?.appVersionFooter ?? 'ShieldNet v1.0.0 • Sécurité Télécom',
+                    l10n?.appVersionFooter ?? 'ShieldNet v1.0.0 • Sérénité & Sécurité Télécom',
                     style: const TextStyle(fontSize: 12, color: Colors.grey),
                   ),
                 ],

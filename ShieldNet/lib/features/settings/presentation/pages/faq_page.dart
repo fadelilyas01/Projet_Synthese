@@ -195,7 +195,7 @@ class _HelpFaqPageState extends State<HelpFaqPage> {
           category: 'Protection des appels',
           question: 'Est-ce que l\'application consomme beaucoup de batterie ?',
           answer:
-              'Non, pratiquement rien. ShieldNet reste totalement silencieux en arrière-plan et ne se réveille qu\'une fraction de seconde lorsqu\'un appel arrive sur votre appareil.\n\nGrâce à son moteur de vérification locale ultra-optimisé et à sa structure compacte (filtre de Bloom), l\'impact sur votre autonomie est inférieur à 0,5% par jour. C\'est l\'équivalent d\'un détecteur de fumée : il veille en permanence sans dépenser d\'énergie inutile.',
+              'Non, pratiquement rien. ShieldNet reste totalement silencieux en arrière-plan et ne se réveille qu\'une fraction de seconde lorsqu\'un appel arrive sur votre appareil.\n\nGrâce à son moteur de vérification locale ultra-optimisé et à sa conception légère, l\'impact sur votre autonomie est inférieur à 0,5% par jour. C\'est l\'équivalent d\'un détecteur de fumée : il veille en permanence sans dépenser d\'énergie inutile.',
         ),
 
         // ── Catégorie 2 : Vos informations personnelles
@@ -204,14 +204,14 @@ class _HelpFaqPageState extends State<HelpFaqPage> {
           category: 'Vos informations personnelles',
           question: 'Est-ce que ShieldNet consulte mes contacts ou mes messages privés ?',
           answer:
-              'Non, jamais. ShieldNet ne téléverse pas vos contacts, ne lit pas le contenu de vos messages et ne conserve aucun historique nominatif sur des serveurs externes.\n\nPour vérifier un numéro suspect, l\'application génère une empreinte anonyme — un code mathématique cryptographique irréversible (SHA-256). Seul ce code est confronté à la base de données. Personne, pas même les ingénieurs de ShieldNet, ne peut retrouver votre numéro ou l\'identité de vos correspondants.',
+              'Non, jamais. ShieldNet ne téléverse pas vos contacts, ne lit pas le contenu de vos messages et ne conserve aucun historique nominatif sur des serveurs externes.\n\nPour vérifier un numéro suspect, l\'application génère une empreinte anonyme et chiffrée, totalement irréversible. Seul ce code protégé est confronté à la liste sécurisée. Personne, pas même les créateurs de ShieldNet, ne peut retrouver votre numéro ou l\'identité de vos correspondants.',
         ),
         FaqItemData(
           categoryId: 'confidentialite',
           category: 'Vos informations personnelles',
           question: 'Mes signalements de spam sont-ils vraiment anonymes ?',
           answer:
-              'Oui, à 100%. Avant d\'envoyer un signalement, votre téléphone convertit automatiquement le numéro en empreinte mathématique à sens unique (SHA-256). C\'est cette empreinte, associée à la catégorie de fraude, qui alimente notre consensus communautaire.\n\nAucun identifiant personnel, nom, adresse ou donnée de géolocalisation n\'est associé au signalement.',
+              'Oui, à 100%. Avant d\'envoyer un signalement, votre téléphone convertit automatiquement le numéro en empreinte chiffrée anonyme. C\'est cette empreinte, associée à la catégorie de fraude, qui alimente la protection collective.\n\nAucun identifiant personnel, nom, adresse ou donnée de géolocalisation n\'est associé au signalement.',
         ),
 
         // ── Catégorie 3 : Numéros importants & contestations
@@ -243,7 +243,7 @@ class _HelpFaqPageState extends State<HelpFaqPage> {
           category: 'Autorisations système Android',
           question: 'La permission de lecture des SMS est-elle obligatoire ?',
           answer:
-              'Non, cette permission est totalement optionnelle. Elle est demandée uniquement si vous activez l\'Inspecteur de liens SMS — un outil qui vous avertit lorsqu\'un SMS contient un lien de phishing suspect (fausse livraison, faux remboursement fiscal, etc.).\n\nMême activée, cette analyse est réalisée exclusivement en local sur votre appareil. Aucun contenu de message n\'est transmis sur internet.',
+              'Non, cette permission est totalement optionnelle. Elle est demandée uniquement si vous activez le Vérificateur de SMS & Liens — un outil qui vous avertit lorsqu\'un SMS contient un lien frauduleux suspect (fausse livraison, faux remboursement fiscal, etc.).\n\nMême activée, cette analyse est réalisée exclusivement en local sur votre appareil. Aucun contenu de message n\'est transmis sur internet.',
         ),
       ];
     } else {
@@ -268,7 +268,7 @@ class _HelpFaqPageState extends State<HelpFaqPage> {
           category: 'Call Protection',
           question: 'Does the app drain my battery?',
           answer:
-              'Barely at all. ShieldNet stays completely idle in the background and only activates for a split second when a call arrives.\n\nThanks to its lightweight local screening engine and compact bloom filter structure, daily battery usage is less than 0.5%. It is just like a home smoke alarm: constantly vigilant without wasting energy.',
+              'Barely at all. ShieldNet stays completely idle in the background and only activates for a split second when a call arrives.\n\nThanks to its lightweight local screening engine and efficient design, daily battery usage is less than 0.5%. It is just like a home smoke alarm: constantly vigilant without wasting energy.',
         ),
 
         // ── Category 2: Your Personal Information
@@ -277,14 +277,14 @@ class _HelpFaqPageState extends State<HelpFaqPage> {
           category: 'Your Personal Information',
           question: 'Does ShieldNet read my contacts or private messages?',
           answer:
-              'No, never. ShieldNet does not upload your contacts, does not read your private message text, and keeps zero nominative logs on remote servers.\n\nTo check a suspicious number, the app produces an anonymous hash — an irreversible cryptographic code (SHA-256). Only this code is matched against the database. No one, not even ShieldNet engineers, can identify your phone number or the identity of your callers.',
+              'No, never. ShieldNet does not upload your contacts, does not read your private message text, and keeps zero nominative logs on remote servers.\n\nTo check a suspicious number, the app produces an anonymous, irreversible digital fingerprint. Only this protected code is matched against the database. No one, not even ShieldNet engineers, can identify your phone number or the identity of your callers.',
         ),
         FaqItemData(
           categoryId: 'confidentialite',
           category: 'Your Personal Information',
           question: 'Are my spam reports truly anonymous?',
           answer:
-              'Yes, 100%. Before transmitting any report, your phone automatically transforms the number into a one-way mathematical fingerprint (SHA-256). Only this cryptographic hash, paired with the category of fraud, feeds our community consensus.\n\nNo personal identity, name, address, or GPS coordinates are ever attached to a report.',
+              'Yes, 100%. Before transmitting any report, your phone automatically transforms the number into an anonymous protected fingerprint. Only this secure code, paired with the category of fraud, feeds our community protection.\n\nNo personal identity, name, address, or GPS coordinates are ever attached to a report.',
         ),
 
         // ── Category 3: Important Numbers & Disputes
