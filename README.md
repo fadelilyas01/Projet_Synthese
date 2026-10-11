@@ -27,11 +27,11 @@ Projet synthese/
 │   ├── android/              # Service natif d'interception (CallScreeningService) & Gradle 8.13+
 │   ├── lib/                  # Code source Flutter (Clean Architecture, Riverpod)
 │   ├── l10n/                 # Fichiers de localisation bilingues (français / anglais)
-│   └── test/                 # 62 tests automatisés (unitaires, services, observabilité et sécurité)
+│   └── test/                 # 67 tests automatisés (unitaires, services, observabilité et sécurité)
 │
 ├── shieldnet_backend/        # Serveur d'API REST et console de modération (Django)
-│   ├── shield_api/           # API REST, modèles, services de modération, OTP et consensus
-│   │   └── tests/            # 74 tests automatisés du backend (API, consensus, RBAC et modération)
+│   ├── shield_api/           # API REST, modèles, moteur IA, modération, OTP et consensus
+│   │   └── tests/            # 78 tests automatisés du backend (API, consensus, RBAC et modération)
 │   ├── shieldnet_backend/    # Configuration générale et routage Django
 │   └── templates/            # Gabarits HTML de la console d'administration SOC
 │
@@ -41,10 +41,10 @@ Projet synthese/
 │   ├── OPERATIONS_PRODUCTION_ET_MAINTENANCE.md # Guide des opérations, PRA, scalabilité et versioning
 │   └── SECURITY_AND_THREAT_MODEL.md
 │
-├── Jenkinsfile               # Pipeline d'intégration continue CI/CD (136 tests, linting, build APK)
+├── Jenkinsfile               # Pipeline d'intégration continue CI/CD (145 tests, linting, build APK)
 ├── docker-compose.jenkins.yml# Déploiement local du serveur Jenkins LTS conteneurisé
 ├── start-dev.ps1             # Script de démarrage de l'environnement de développement
-└── test-all.ps1              # Script pour exécuter l'ensemble des 136 tests automatisés
+└── test-all.ps1              # Script pour exécuter l'ensemble des 145 tests automatisés
 ```
 
 ---
@@ -113,12 +113,12 @@ flutter run
 
 ## 4. Tests automatisés et qualité du code
 
-Le projet comprend **136 tests automatisés (100% au vert)** validant le bon fonctionnement de l'ensemble de la solution :
+Le projet comprend **145 tests automatisés (100% au vert)** validant le bon fonctionnement de l'ensemble de la solution :
 
-- **74 tests côté backend (Django)** : couvrent l'API REST, l'authentification JWT, les codes OTP, les calculs de consensus citoyen, le filtrage régional, les métriques SOC, la modération et la résilience aux pannes.
-- **62 tests côté mobile (Flutter)** : valident le filtrage d'appels, l'IA prédictive, le hachage HMAC-SHA256, la gestion de session (timeout 5 min avec reverrouillage biométrique), l'observabilité utilisateur, le mode démo jury, le stockage sécurisé et la résilience réseau (retry exponentiel & backoff).
+- **78 tests côté backend (Django)** : couvrent l'API REST, l'authentification JWT, les codes OTP, le moteur IA d'arbitrage sémantique, les calculs de consensus citoyen, le filtrage régional, les métriques SOC, la modération et la résilience aux pannes.
+- **67 tests côté mobile (Flutter)** : valident le filtrage d'appels natif, l'IA heuristique prédictive (Neighbor Spoofing, Burst Dialing, entropie), le hachage HMAC-SHA256, la gestion de session (timeout 5 min avec reverrouillage biométrique), le filtre d'appels nocturne et strict, le stockage sécurisé et la synchronisation résiliente.
 
-Pour exécuter la suite complète des 136 tests d'un seul coup :
+Pour exécuter la suite complète des 145 tests d'un seul coup :
 ```powershell
 .\test-all.ps1
 ```
@@ -129,11 +129,11 @@ Pour exécuter la suite complète des 136 tests d'un seul coup :
 
 La qualité et l'intégrité du code sont automatisées à chaque validation via le fichier [`Jenkinsfile`](file:///C:/Projet/Projet%20synthese/Jenkinsfile).
 
-### Étapes du pipeline Jenkins (136 tests validés) :
+### Étapes du pipeline Jenkins (145 tests validés) :
 1. **Environnement & Outils** : Détection des exécutables et versions (`python`, `flutter`, `git`).
-2. **Backend — Validation & Tests (Django)** : Installation des dépendances, vérification stricte des migrations (`makemigrations --check --dry-run`) et exécution des **74 tests unitaires** (`python manage.py test shield_api`).
+2. **Backend — Validation & Tests (Django)** : Installation des dépendances, vérification stricte des migrations (`makemigrations --check --dry-run`) et exécution des **78 tests unitaires** (`python manage.py test shield_api`).
 3. **Mobile — Analyse Statique (Flutter Linter)** : Analyse rigoureuse du code Dart avec `flutter analyze` (**0 avertissement bloquant toléré**).
-4. **Mobile — Tests Unitaires & Widgets (Flutter)** : Exécution des **62 tests automatisés** avec `flutter test`.
+4. **Mobile — Tests Unitaires & Widgets (Flutter)** : Exécution des **67 tests automatisés** avec `flutter test`.
 5. **Mobile — Compilation de l'APK Android** : Génération automatisée du paquet d'application avec `flutter build apk --debug`.
 6. **Archivage des Artefacts** : Conservation et mise à disposition directe du binaire APK compilé (`app-debug.apk`) dans Jenkins.
 

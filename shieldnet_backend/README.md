@@ -94,14 +94,14 @@ Pour créer un compte interactif personnalisé avec votre propre mot de passe :
 python manage.py createsuperuser
 ```
 
-### 3. Exécution des tests automatisés (74 tests)
+### 3. Exécution des tests automatisés (78 tests)
 
 ```powershell
 # Exécution de la suite officielle de tests du backend
 python manage.py test shield_api
 ```
 
-*La suite de tests (74/74 validés dans le pipeline Jenkins) vérifie le bon fonctionnement des modèles, de l'authentification JWT & Google OAuth2, des codes OTP, des calculs de consensus citoyen, des règles régionales, du rate-limiting anti-brute force et de la console d'administration SOC.*
+*La suite de tests (78/78 validés dans le pipeline Jenkins) vérifie le bon fonctionnement des modèles, de l'authentification JWT & Google OAuth2, des codes OTP, du moteur d'arbitrage et d'analyse sémantique par IA, des calculs de consensus citoyen, des règles régionales, du rate-limiting anti-brute force et de la console d'administration SOC.*
 
 ### 4. Démarrage du serveur
 

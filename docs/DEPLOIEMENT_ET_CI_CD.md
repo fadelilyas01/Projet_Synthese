@@ -160,9 +160,9 @@ Le fichier `Jenkinsfile` automatise la validation de la qualité de code à chaq
 ```mermaid
 flowchart TD
     A["Événement Git (Commit / Pull Request)"] --> B["Étape 1 : Vérification de l'environnement (Python, Flutter SDK)"]
-    B --> C["Étape 2 : Tests Backend Django (74 tests unitaires et migrations)"]
+    B --> C["Étape 2 : Tests Backend Django (78 tests unitaires et migrations)"]
     C --> D["Étape 3 : Analyse statique Flutter (flutter analyze)"]
-    D --> E["Étape 4 : Tests Frontend Flutter (62 tests unitaires et widgets)"]
+    D --> E["Étape 4 : Tests Frontend Flutter (67 tests unitaires et widgets)"]
     E --> F["Étape 5 : Compilation de l'APK (flutter build apk)"]
     F --> G["Étape 6 : Archivage de l'artefact APK"]
     G --> H["Rapport de succès du pipeline"]
@@ -170,9 +170,9 @@ flowchart TD
 
 ### Détail des vérifications :
 1. **Environnement** : Détection des exécutables nécessaires (`python`, `flutter`, `git`) sur la machine de build.
-2. **Backend Django** : Exécution des 74 tests unitaires et d'API (`python manage.py test shield_api`) et vérification de la cohérence des migrations (`makemigrations --check`).
+2. **Backend Django** : Exécution des 78 tests unitaires et d'API (`python manage.py test shield_api`) et vérification de la cohérence des migrations (`makemigrations --check`).
 3. **Analyse statique Dart** : Contrôle du respect des bonnes pratiques avec `flutter analyze` (aucun avertissement bloquant toléré).
-4. **Tests Frontend Mobile** : Exécution des 62 tests Flutter couvrant la cryptographie HMAC, le masquage des numéros, l'interception et le bon comportement des widgets d'affichage.
+4. **Tests Frontend Mobile** : Exécution des 67 tests Flutter couvrant la cryptographie HMAC, le masquage des numéros, l'interception et le bon comportement des widgets d'affichage.
 5. **Compilation** : Génération du paquet d'installation Android (`app-debug.apk` ou `app-release.apk`).
 6. **Archivage** : Mise à disposition du binaire compilé dans les artefacts de build de Jenkins.
 

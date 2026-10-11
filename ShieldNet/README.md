@@ -93,8 +93,8 @@ ShieldNet/
 │   ├── l10n/                                  # Traductions bilingues ARB (français et anglais)
 │   └── main.dart                              # Point d'entrée de l'application
 │
-└── test/                                      # 62 tests automatisés (100% de réussite)
-    ├── services/                              # Tests auth, api, session timeout et observabilité / démo
+└── test/                                      # 67 tests automatisés (100% de réussite)
+    ├── services/                              # Tests auth, api, session timeout et observabilité
     └── unit/                                  # Tests IA prédictive, crypto et filtrage d'appels
 ```
 
@@ -103,15 +103,16 @@ ShieldNet/
 ## 4. Fonctionnalités clés
 
 - **Filtrage silencieux et automatique** : Bloque les numéros indésirables avant la première sonnerie (< 2 ms).
-- **Simulateur visuel d'appel en temps réel** : Démonstration interactive de l'interception avec logs du service natif et comparaison entre décision locale ultra-rapide et traitement distant.
-- **Immunité totale des urgences** : Les services d'urgence (911, 811, 988, etc.) et les favoris ne sont jamais bloqués.
+- **Modes Bouclier Avancés** :
+  - **Mode Contacts Uniquement (Bouclier Strict)** : Seuls vos contacts enregistrés font sonner le téléphone.
+  - **Mode Bouclier Nocturne** : Filtrage silencieux automatique sur plage horaire personnalisée pour préserver votre sommeil.
+- **Immunité totale des urgences** : Les services d'urgence (911, 811, 988, etc.) et les contacts protégés ne sont jamais bloqués.
 - **Fonctionnement hors-ligne d'abord (Offline-First)** : Le filtrage fonctionne sans connexion. Les signalements hors-ligne sont synchronisés dès le retour du réseau.
 - **Contestation citoyenne** : Permet de certifier un faux positif comme légitime directement depuis l'historique d'appels.
-- **Vérification unitaire et prédiction IA** : Diagnostic heuristique et analyse par intelligence artificielle des indicatifs et schémas d'usurpation (*Neighbor Spoofing*).
+- **Vérification unitaire et prédiction IA** : Diagnostic heuristique et analyse par intelligence artificielle des indicatifs et schémas d'usurpation (*Neighbor Spoofing*, *Burst Dialing*, entropie de Shannon).
 - **Inspecteur de SMS frauduleux** : Analyse locale des messages suspects avec score explicite, surbrillance des mots-clés dangereux et analyse de réputation des liens web.
 - **Conformité visuelle Loi 25 & Vie privée** : Page de transparence expliquant l'absence de collecte de carnet d'adresses et les garanties cryptographiques.
-- **Mode Démo avec données réalistes** : Scénarios préconfigurés pour faciliter la démonstration sans dépendance à une base de données distante.
-- **Observabilité et retours structurés** : Suivi de l'adoption des fonctionnalités et boîte de commentaires utilisateurs intégrée.
+- **Observabilité et retours structurés** : Suivi anonyme de l'adoption des fonctionnalités et boîte de commentaires utilisateurs intégrée.
 - **Mode Senior** : Grossissement ergonomique du texte (`TextScaler 1.22x`) activable dans les paramètres.
 - **Conformité régionale** : Paramétrage adapté selon la juridiction (Loi 25 du Québec, LPRPDE Canada, TCPA USA).
 - **Prise en charge bilingue complète** : Interface entièrement traduite en français et en anglais.
@@ -144,7 +145,7 @@ flutter pub get
 # Générer les fichiers de langues
 flutter gen-l10n
 
-# Lancer la suite de 52 tests automatisés
+# Lancer la suite de 67 tests automatisés
 flutter test
 
 # Vérifier l'analyse statique du code (0 avertissement)

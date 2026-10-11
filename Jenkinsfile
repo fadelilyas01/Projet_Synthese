@@ -36,7 +36,7 @@ pipeline {
             steps {
                 dir('shieldnet_backend') {
                     script {
-                        echo "--- Validation des migrations et tests unitaires Django (74 tests) ---"
+                        echo "--- Validation des migrations et tests unitaires Django (78 tests) ---"
                         if (isUnix()) {
                             sh 'python3 -m pip install -r requirements.txt --quiet'
                             sh 'python3 manage.py makemigrations --check --dry-run'
@@ -72,7 +72,7 @@ pipeline {
             steps {
                 dir('ShieldNet') {
                     script {
-                        echo "--- Exécution des tests unitaires Flutter (62 tests) ---"
+                        echo "--- Exécution des tests unitaires Flutter (67 tests) ---"
                         if (isUnix()) {
                             sh 'flutter test'
                         } else {
@@ -118,10 +118,10 @@ pipeline {
         }
         success {
             echo "=========================================================="
-            echo " [SUCCÈS] Pipeline ShieldNet validé : 136 tests au vert ! "
-            echo "  - Backend Django REST : 74/74 tests réussis"
+            echo " [SUCCÈS] Pipeline ShieldNet validé : 145 tests au vert ! "
+            echo "  - Backend Django REST : 78/78 tests réussis"
             echo "  - Analyse statique Dart : 0 erreur, 0 avertissement"
-            echo "  - Client mobile Flutter : 62/62 tests réussis"
+            echo "  - Client mobile Flutter : 67/67 tests réussis"
             echo "=========================================================="
         }
         failure {

@@ -68,7 +68,7 @@ flowchart TD
 
 ### Avantages de ce découpage
 - **Indépendance des règles métier** : Le calcul du score de risque, l'analyse heuristique des SMS et les logiques de décision ne dépendent d'aucun framework graphique.
-- **Facilité des tests** : Les interfaces permettent d'injecter facilement des mocks lors des tests automatisés (35 tests côté Flutter et 74 tests côté Django, soit 109 tests au total).
+- **Facilité des tests** : Les interfaces permettent d'injecter facilement des mocks lors des tests automatisés (67 tests côté Flutter et 78 tests côté Django, soit 145 tests au total).
 
 ---
 
