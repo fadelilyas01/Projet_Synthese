@@ -159,6 +159,7 @@ class BlacklistRepositoryImpl implements BlacklistRepository {
       riskScore: model.riskScore,
       reportsCount: model.reportsCount,
       updatedAt: updatedDate,
+      isUserReported: model.isUserReported,
     );
   }
 }

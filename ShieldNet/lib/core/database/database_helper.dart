@@ -216,7 +216,7 @@ class DatabaseHelper {
 
     final db = await openDatabase(
       path,
-      version: 5,
+      version: 6,
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
@@ -306,6 +306,8 @@ class DatabaseHelper {
       if (count < 10) {
         await _seedPreloadedThreatIntel(db);
       }
+      // Sécurité absolue : garantir que les menaces publiques non déclarées par l'utilisateur restent à 0
+      await db.rawUpdate('UPDATE blacklist SET is_user_reported = 0 WHERE is_user_reported IS NULL');
     } catch (e) {
       AppLogger.log('[DatabaseHelper] Erreur vérification amorçage Threat Intelligence: $e');
     }
@@ -420,6 +422,13 @@ class DatabaseHelper {
         await db.execute('CREATE INDEX IF NOT EXISTS idx_is_user_reported ON blacklist(is_user_reported)');
       } catch (e) {
         AppLogger.log('[DatabaseHelper] Erreur migration V5 is_user_reported: $e');
+      }
+    }
+    if (oldVersion < 6) {
+      try {
+        await db.execute('UPDATE blacklist SET is_user_reported = 0 WHERE is_user_reported IS NULL');
+      } catch (e) {
+        AppLogger.log('[DatabaseHelper] Erreur migration V6 is_user_reported: $e');
       }
     }
   }

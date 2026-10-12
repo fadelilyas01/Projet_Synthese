@@ -6,6 +6,7 @@ class BlacklistedEntry {
   final int riskScore;
   final int reportsCount;
   final DateTime updatedAt;
+  final bool isUserReported;
 
   const BlacklistedEntry({
     required this.phoneHash,
@@ -14,6 +15,7 @@ class BlacklistedEntry {
     required this.riskScore,
     required this.reportsCount,
     required this.updatedAt,
+    this.isUserReported = false,
   });
 
   bool get isHighRisk => riskScore >= 70;

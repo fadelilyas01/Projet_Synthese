@@ -342,7 +342,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
     final cardBg = AppTheme.cardBg(isDark);
     final borderColor = AppTheme.borderColor(isDark);
 
-    final totalBlocked = blacklistAsync.value?.length ?? 0;
+    final totalBlocked = blacklistAsync.value?.where((e) => e.isUserReported).length ?? 0;
     final l10n = AppLocalizations.of(context);
     final isEn = (l10n?.localeName == 'en') || (Localizations.localeOf(context).languageCode == 'en');
     final isProtectionActive = protectionState.value ?? false;
@@ -678,7 +678,8 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
               loading: () => const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator())),
               error: (err, stack) => const SizedBox(),
               data: (entries) {
-                if (entries.isEmpty) {
+                final userEntries = entries.where((e) => e.isUserReported).toList();
+                if (userEntries.isEmpty) {
                   return Container(
                     padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
                     decoration: BoxDecoration(
@@ -738,7 +739,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
                   );
                 }
 
-                final recentItems = entries.take(4).toList();
+                final recentItems = userEntries.take(4).toList();
                 return Container(
                   decoration: BoxDecoration(
                     color: cardBg,

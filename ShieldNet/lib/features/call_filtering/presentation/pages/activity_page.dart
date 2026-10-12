@@ -1015,7 +1015,11 @@ class _ActivityPageState extends ConsumerState<ActivityPage> with SingleTickerPr
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (err, _) => Center(child: Text(isEn ? 'Error: $err' : 'Erreur: $err')),
       data: (entries) {
-        final filtered = entries.where((e) {
+        // Règle stricte de confidentialité et d'ergonomie :
+        // Seuls les numéros explicitement bloqués par l'utilisateur apparaissent ici.
+        // Les menaces publiques de la base de données restent filtrées silencieusement en arrière-plan.
+        final userEntries = entries.where((e) => e.isUserReported).toList();
+        final filtered = userEntries.where((e) {
           if (_searchFilter.isEmpty) return true;
           return e.maskedNumber.toLowerCase().contains(_searchFilter) ||
               e.category.toLowerCase().contains(_searchFilter);
