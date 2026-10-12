@@ -451,6 +451,11 @@ class _AuthBottomSheetState extends ConsumerState<AuthBottomSheet> {
                     ForgotPasswordSheet.show(
                       context,
                       initialEmail: _emailController.text.trim(),
+                      onPasswordResetSuccess: () {
+                        if (mounted) {
+                          Navigator.of(context).pop();
+                        }
+                      },
                     );
                   },
                   child: Text(
