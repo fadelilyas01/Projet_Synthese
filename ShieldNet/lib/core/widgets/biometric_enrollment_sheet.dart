@@ -38,6 +38,8 @@ class BiometricEnrollmentSheet extends StatefulWidget {
       context: context,
       isDismissible: false,
       enableDrag: false,
+      isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => BiometricEnrollmentSheet(onCompleted: onCompleted),
     );
@@ -138,97 +140,99 @@ class _BiometricEnrollmentSheetState extends State<BiometricEnrollmentSheet> {
         ],
       ),
       padding: const EdgeInsets.fromLTRB(28, 20, 28, 36),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Poignée
-          Container(
-            width: 44,
-            height: 4,
-            decoration: BoxDecoration(
-              color: Colors.grey.withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // Badge visuel sécurité d'entreprise
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: AppTheme.primaryColor.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.fingerprint_rounded,
-              size: 52,
-              color: AppTheme.primaryColor,
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // Titre
-          Text(
-            isEn ? 'Enable Biometric Protection' : 'Activer la protection biométrique',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              letterSpacing: -0.3,
-              color: isDark ? AppTheme.textPrimaryDark : AppTheme.textPrimaryLight,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 10),
-
-          // Description claire et professionnelle
-          Text(
-            isEn
-                ? 'Unlock ShieldNet instantly with Face ID or your fingerprint on your next visits, without having to re-enter your credentials.'
-                : 'Déverrouillez ShieldNet instantanément avec Face ID ou votre empreinte digitale lors de vos prochaines visites, sans avoir à ressaisir vos identifiants.',
-            style: TextStyle(
-              fontSize: 14,
-              height: 1.45,
-              color: isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondaryLight,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 28),
-
-          // Bouton 1 : Activer maintenant
-          ElevatedButton.icon(
-            onPressed: _isLoading ? null : _enableBiometrics,
-            icon: _isLoading
-                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                : const Icon(Icons.security_rounded, size: 20),
-            label: Text(
-              _isLoading
-                  ? (isEn ? 'Enabling...' : 'Activation en cours...')
-                  : (isEn ? 'Enable now' : 'Activer maintenant'),
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-            ),
-            style: ElevatedButton.styleFrom(
-              minimumSize: const Size(double.infinity, 52),
-              backgroundColor: AppTheme.primaryColor,
-              foregroundColor: Colors.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // Bouton 2 : Plus tard
-          TextButton(
-            onPressed: _isLoading ? null : _skipForNow,
-            child: Text(
-              isEn ? 'Maybe later' : 'Plus tard',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondaryLight,
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Poignée
+            Container(
+              width: 44,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(2),
               ),
             ),
-          ),
-        ],
+            const SizedBox(height: 24),
+
+            // Badge visuel sécurité d'entreprise
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.fingerprint_rounded,
+                size: 52,
+                color: AppTheme.primaryColor,
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Titre
+            Text(
+              isEn ? 'Enable Biometric Protection' : 'Activer la protection biométrique',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                letterSpacing: -0.3,
+                color: isDark ? AppTheme.textPrimaryDark : AppTheme.textPrimaryLight,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 10),
+
+            // Description claire et professionnelle
+            Text(
+              isEn
+                  ? 'Unlock ShieldNet instantly with Face ID or your fingerprint on your next visits, without having to re-enter your credentials.'
+                  : 'Déverrouillez ShieldNet instantanément avec Face ID ou votre empreinte digitale lors de vos prochaines visites, sans avoir à ressaisir vos identifiants.',
+              style: TextStyle(
+                fontSize: 14,
+                height: 1.45,
+                color: isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondaryLight,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 28),
+
+            // Bouton 1 : Activer maintenant
+            ElevatedButton.icon(
+              onPressed: _isLoading ? null : _enableBiometrics,
+              icon: _isLoading
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Icon(Icons.security_rounded, size: 20),
+              label: Text(
+                _isLoading
+                    ? (isEn ? 'Enabling...' : 'Activation en cours...')
+                    : (isEn ? 'Enable now' : 'Activer maintenant'),
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+              ),
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size(double.infinity, 52),
+                backgroundColor: AppTheme.primaryColor,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Bouton 2 : Plus tard
+            TextButton(
+              onPressed: _isLoading ? null : _skipForNow,
+              child: Text(
+                isEn ? 'Maybe later' : 'Plus tard',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondaryLight,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

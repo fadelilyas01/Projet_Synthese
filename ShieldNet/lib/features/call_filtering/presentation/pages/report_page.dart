@@ -165,11 +165,14 @@ class _ReportPageState extends ConsumerState<ReportPage> {
               children: [
                 const Icon(Icons.lock_outline_rounded, size: 14, color: Colors.grey),
                 const SizedBox(width: 6),
-                Text(
-                  (l10n?.localeName == 'en')
-                      ? '100% private: your personal identity is never disclosed.'
-                      : '100% confidentiel : votre identité n\'est jamais communiquée.',
-                  style: const TextStyle(fontSize: 11, color: Colors.grey),
+                Flexible(
+                  child: Text(
+                    (l10n?.localeName == 'en')
+                        ? '100% private: your personal identity is never disclosed.'
+                        : '100% confidentiel : votre identité n\'est jamais communiquée.',
+                    style: const TextStyle(fontSize: 11, color: Colors.grey),
+                    textAlign: TextAlign.center,
+                  ),
                 ),
               ],
             ),

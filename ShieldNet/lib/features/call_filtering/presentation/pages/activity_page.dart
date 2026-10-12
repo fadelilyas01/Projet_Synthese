@@ -416,49 +416,53 @@ class _ActivityPageState extends ConsumerState<ActivityPage> with SingleTickerPr
         final l10n = AppLocalizations.of(context);
         final isEn = (l10n?.localeName == 'en') || (Localizations.localeOf(context).languageCode == 'en');
         final catColor = _getCategoryColor(item.category);
-        return Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: catColor.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(8),
+        return SafeArea(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(24, 20, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: catColor.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          _formatCategory(item.category, isEn),
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: catColor),
+                        ),
                       ),
-                      child: Text(
-                        _formatCategory(item.category, isEn),
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: catColor),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded),
+                        onPressed: () => Navigator.pop(ctx),
                       ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close_rounded),
-                      onPressed: () => Navigator.pop(ctx),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  item.maskedNumber.isNotEmpty ? item.maskedNumber : (l10n?.disputeProtectedNumber ?? 'Numéro protégé'),
-                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    const Icon(Icons.warning_amber_rounded, size: 16, color: AppTheme.accentRed),
-                    const SizedBox(width: 6),
-                    Text(
-                      l10n?.disputeRiskScore(item.riskScore, item.reportsCount) ?? 'Score de risque : ${item.riskScore}% (${item.reportsCount} signalement(s))',
-                      style: const TextStyle(fontSize: 13, color: AppTheme.accentRed, fontWeight: FontWeight.w600),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    item.maskedNumber.isNotEmpty ? item.maskedNumber : (l10n?.disputeProtectedNumber ?? 'Numéro protégé'),
+                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Icon(Icons.warning_amber_rounded, size: 16, color: AppTheme.accentRed),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          l10n?.disputeRiskScore(item.riskScore, item.reportsCount) ?? 'Score de risque : ${item.riskScore}% (${item.reportsCount} signalement(s))',
+                          style: const TextStyle(fontSize: 13, color: AppTheme.accentRed, fontWeight: FontWeight.w600),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
                 const SizedBox(height: 16),
                 Container(
                   padding: const EdgeInsets.all(12),
@@ -523,10 +527,11 @@ class _ActivityPageState extends ConsumerState<ActivityPage> with SingleTickerPr
               ],
             ),
           ),
-        );
-      },
-    );
-  }
+        ),
+      );
+    },
+  );
+}
 
   void _showContestModal(BuildContext context, BlacklistedEntry item) {
     String selectedReason = 'service';
@@ -1064,11 +1069,15 @@ class _ActivityPageState extends ConsumerState<ActivityPage> with SingleTickerPr
                   children: [
                     Row(
                       children: [
-                        Text(
-                          l10n?.publicThreatsBannerTitle ?? (isEn ? 'Automatic Protection Active' : 'Protection automatique active'),
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                        Expanded(
+                          child: Text(
+                            l10n?.publicThreatsBannerTitle ?? (isEn ? 'Automatic Protection Active' : 'Protection automatique active'),
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
-                        const Spacer(),
+                        const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                           decoration: BoxDecoration(
@@ -1231,16 +1240,20 @@ class _ActivityPageState extends ConsumerState<ActivityPage> with SingleTickerPr
                               ),
                               subtitle: Row(
                                 children: [
-                                  Container(
-                                    margin: const EdgeInsets.only(top: 4),
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: catColor.withValues(alpha: 0.12),
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Text(
-                                      _formatCategory(item.category, isEn),
-                                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: catColor),
+                                  Flexible(
+                                    child: Container(
+                                      margin: const EdgeInsets.only(top: 4),
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: catColor.withValues(alpha: 0.12),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        _formatCategory(item.category, isEn),
+                                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: catColor),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
                                     ),
                                   ),
                                 ],

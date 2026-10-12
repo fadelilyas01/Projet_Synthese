@@ -163,12 +163,15 @@ class _SmsInspectorPageState extends ConsumerState<SmsInspectorPage> {
           ),
           // Échantillons de démonstration (Scénarios réels)
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                isEn ? 'EXAMPLE FRAUDULENT SMS TEMPLATES' : 'EXEMPLES DE SMS FRAUDULEUX RÉELS',
-                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.grey, letterSpacing: 1.0),
+              Expanded(
+                child: Text(
+                  isEn ? 'EXAMPLE FRAUDULENT SMS TEMPLATES' : 'EXEMPLES DE SMS FRAUDULEUX RÉELS',
+                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.grey, letterSpacing: 1.0),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
+              const SizedBox(width: 8),
               const Icon(Icons.touch_app_rounded, size: 14, color: Colors.grey),
             ],
           ),

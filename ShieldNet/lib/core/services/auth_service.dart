@@ -245,7 +245,10 @@ class AuthService {
     try {
       final response = await _dio.post(
         'auth/email/send-otp/',
-        data: {'email': email.trim().toLowerCase()},
+        data: {
+          'email': email.trim().toLowerCase(),
+          'purpose': 'reset_password',
+        },
       );
       if (response.statusCode == 200 && response.data != null) {
         final data = response.data as Map<String, dynamic>;

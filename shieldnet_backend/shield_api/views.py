@@ -478,6 +478,114 @@ L'equipe ShieldNet
     threading.Thread(target=_send_async, daemon=True).start()
 
 
+
+def send_password_changed_confirmation_email(user, request=None):
+    """
+    Envoie un courriel d'alerte securite confirmant le changement de mot de passe.
+    """
+    if not user or not getattr(user, 'email', None):
+        return
+
+    import threading
+    import logging
+    from django.conf import settings
+    from django.core.mail import EmailMultiAlternatives
+
+    recipient_email = user.email.strip()
+    display_name = (user.first_name or "").strip() or recipient_email.split('@')[0].capitalize()
+
+    raw_from = getattr(settings, 'DEFAULT_FROM_EMAIL', '') or 'ShieldNet <ilyf44118@gmail.com>'
+    if 'Security' in raw_from:
+        raw_from = raw_from.replace('ShieldNet Security', 'ShieldNet')
+    from_email = raw_from
+
+    subject = "ShieldNet : Modification de votre mot de passe confirmée"
+
+    message = f"""Bonjour {display_name},
+
+Le mot de passe de votre compte ShieldNet ({recipient_email}) a ete modifie avec succes.
+
+Vous pouvez desormais vous connecter a votre compte avec votre nouveau mot de passe.
+
+Si vous n'etes pas a l'origine de cette modification, veuillez repondre immediatement a ce courriel pour securiser votre compte.
+
+Bien cordialement,
+L'equipe ShieldNet
+"""
+
+    html_message = f"""<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Modification de mot de passe ShieldNet</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #F8FAFC; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1E293B;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #F8FAFC; padding: 32px 14px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width: 560px; background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 14px; overflow: hidden; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);">
+          <tr>
+            <td style="background-color: #0F172A; padding: 24px 30px; text-align: center;">
+              <div style="font-size: 22px; font-weight: 800; color: #38BDF8; letter-spacing: 1.5px; text-transform: uppercase;">SHIELDNET</div>
+              <div style="font-size: 13px; color: #94A3B8; margin-top: 4px; font-weight: 500;">Securite de votre compte</div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 30px 30px 24px 30px;">
+              <h1 style="margin: 0 0 16px 0; font-size: 20px; font-weight: 700; color: #0F172A;">Bonjour {display_name},</h1>
+              <p style="margin: 0 0 16px 0; font-size: 15px; line-height: 1.6; color: #334155;">
+                Le mot de passe associe a votre compte <strong>{recipient_email}</strong> a ete mis a jour avec succes.
+              </p>
+              <div style="background-color: #F0FDF4; border-left: 4px solid #16A34A; border-radius: 8px; padding: 14px 18px; margin: 20px 0 24px 0;">
+                <div style="font-size: 14px; font-weight: 700; color: #166534;">Votre compte est protege</div>
+                <div style="font-size: 13px; color: #15803D; margin-top: 4px;">Vous pouvez a present utiliser votre nouveau mot de passe pour vous connecter sur tous vos appareils.</div>
+              </div>
+              <p style="margin: 20px 0 0 0; font-size: 13px; line-height: 1.5; color: #64748B; border-top: 1px solid #E2E8F0; padding-top: 16px;">
+                <strong>Vous n'etes pas a l'origine de cette modification ?</strong><br>
+                Repondez immediatement a ce message pour que notre equipe puisse securiser votre compte.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color: #F8FAFC; padding: 16px 30px; text-align: center; border-top: 1px solid #E2E8F0;">
+              <p style="margin: 0; font-size: 12px; color: #94A3B8;">
+                ShieldNet &bull; Securite et confidentialite des communications
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>"""
+
+    def _send_async():
+        try:
+            msg = EmailMultiAlternatives(
+                subject=subject,
+                body=message,
+                from_email=from_email,
+                to=[recipient_email],
+                reply_to=['ilyf44118@gmail.com'],
+            )
+            msg.extra_headers = {
+                'X-Priority': '1',
+                'Priority': 'urgent',
+                'Importance': 'high',
+                'X-MSMail-Priority': 'High',
+                'X-Mailer': 'ShieldNet Mail Delivery',
+                'Auto-Submitted': 'auto-generated',
+            }
+            msg.attach_alternative(html_message, "text/html")
+            msg.send(fail_silently=False)
+            logging.getLogger('shield_api').info(f"Courriel de confirmation mot de passe modifie delivre a {recipient_email}")
+        except Exception as e:
+            logging.getLogger('shield_api').warning(f"Erreur confirmation mot de passe a {recipient_email}: {e}")
+
+    threading.Thread(target=_send_async, daemon=True).start()
+
+
 class RegisterView(APIView):
     """
     POST /api/v1/auth/register/
@@ -1482,7 +1590,7 @@ from django.core.cache import cache
 class SendEmailOTPView(APIView):
     """
     POST /api/v1/auth/email/send-otp/
-    Genere et envoie un code de verification OTP a 6 chiffres par courriel.
+    Genere et envoie un code de verification OTP a 6 chiffres par courriel de maniere asynchrone et rapide.
     """
     permission_classes = [permissions.AllowAny]
     throttle_classes = [SensitiveOtpThrottle]
@@ -1492,44 +1600,161 @@ class SendEmailOTPView(APIView):
         if not email or '@' not in email:
             return Response({'detail': 'Adresse courriel invalide.'}, status=status.HTTP_400_BAD_REQUEST)
 
+        purpose = request.data.get('purpose', '').strip().lower()
+        is_reset = purpose == 'reset_password' or request.data.get('is_reset') is True
+
         # Génération du code OTP à 6 chiffres
         otp_code = str(random.randint(100000, 999999))
-        cache.set(f'otp_{email}', otp_code, timeout=600) # Valide 10 minutes
+        cache.set(f'otp_{email}', otp_code, timeout=600)  # Valide 10 minutes
 
-        subject = f"[ShieldNet] Votre code de verification : {otp_code}"
+        subject = (
+            f"ShieldNet : Code de récupération de mot de passe ({otp_code})"
+            if is_reset
+            else f"ShieldNet : Votre code de sécurité ({otp_code})"
+        )
+
+        greeting_subtitle = (
+            "Récupération de votre compte ShieldNet"
+            if is_reset
+            else "Vérification de sécurité ShieldNet"
+        )
+
+        action_desc = (
+            "Vous avez demandé la réinitialisation du mot de passe de votre compte ShieldNet."
+            if is_reset
+            else "Voici votre code de sécurité temporaire pour vous connecter à votre compte ShieldNet."
+        )
+
         message = f"""Bonjour,
 
-Voici votre code de verification ShieldNet a 6 chiffres :
+{action_desc}
+
+Votre code de verification a 6 chiffres :
 
   {otp_code}
 
 Ce code est valable pendant 10 minutes. Ne le communiquez a personne.
 
-Si vous n'avez pas demande ce code, vous pouvez ignorer ce message.
+Si vous n'etes pas a l'origine de cette demande, vous pouvez ignorer ce message en toute securite.
 
 L'equipe ShieldNet
 """
-        try:
-            from django.conf import settings
-            raw_from = getattr(settings, 'DEFAULT_FROM_EMAIL', '') or 'ShieldNet <ilyf44118@gmail.com>'
-            if 'Security' in raw_from:
-                raw_from = raw_from.replace('ShieldNet Security', 'ShieldNet')
-            send_mail(
-                subject=subject,
-                message=message,
-                from_email=raw_from,
-                recipient_list=[email],
-                fail_silently=True,
-            )
-        except Exception:
-            pass
 
-        return Response({'detail': 'Code de vérification envoyé avec succès à votre adresse courriel.'}, status=status.HTTP_200_OK)
+        html_message = f"""<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{subject}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #F8FAFC; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1E293B;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #F8FAFC; padding: 32px 14px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width: 540px; background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 14px; overflow: hidden; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);">
+          
+          <!-- En-tête -->
+          <tr>
+            <td style="background-color: #0F172A; padding: 26px 30px; text-align: center;">
+              <div style="font-size: 22px; font-weight: 800; color: #38BDF8; letter-spacing: 1.5px; text-transform: uppercase;">SHIELDNET</div>
+              <div style="font-size: 13px; color: #94A3B8; margin-top: 4px; font-weight: 500;">{greeting_subtitle}</div>
+            </td>
+          </tr>
+
+          <!-- Contenu -->
+          <tr>
+            <td style="padding: 30px 30px 26px 30px;">
+              <h1 style="margin: 0 0 14px 0; font-size: 19px; font-weight: 700; color: #0F172A;">Code de vérification</h1>
+              <p style="margin: 0 0 22px 0; font-size: 15px; line-height: 1.6; color: #334155;">
+                {action_desc} Saisissez le code suivant dans votre application :
+              </p>
+
+              <!-- Boîte Code OTP mise en valeur -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin: 22px 0;">
+                <tr>
+                  <td align="center" style="background: linear-gradient(135deg, #0284C7, #0369A1); border-radius: 12px; padding: 22px 20px;">
+                    <div style="font-size: 36px; font-weight: 800; letter-spacing: 10px; color: #FFFFFF; font-family: 'Courier New', Courier, monospace;">
+                      {otp_code}
+                    </div>
+                    <div style="font-size: 12px; color: #E0F2FE; margin-top: 8px; font-weight: 500;">
+                      Valable pendant 10 minutes
+                    </div>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Avertissement de sécurité -->
+              <div style="background-color: #FFFBEB; border-left: 4px solid #F59E0B; border-radius: 6px; padding: 12px 16px; margin: 20px 0 16px 0;">
+                <p style="margin: 0; font-size: 13px; color: #B45309; line-height: 1.5;">
+                  <strong>Consigne de sécurité :</strong> Ne partagez jamais ce code. Aucun membre de l'équipe ShieldNet ne vous demandera votre code de vérification.
+                </p>
+              </div>
+
+              <p style="margin: 20px 0 0 0; font-size: 13px; line-height: 1.5; color: #64748B; border-top: 1px solid #E2E8F0; padding-top: 16px;">
+                Si vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer cet e-mail. Votre compte reste en sécurité.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Pied de page -->
+          <tr>
+            <td style="background-color: #F8FAFC; padding: 14px 30px; text-align: center; border-top: 1px solid #E2E8F0;">
+              <p style="margin: 0; font-size: 12px; color: #94A3B8;">
+                ShieldNet &bull; Sécurité et confidentialité des télécommunications
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>"""
+
+        def _send_otp_async():
+            try:
+                from django.conf import settings
+                from django.core.mail import EmailMultiAlternatives
+                import logging
+
+                raw_from = getattr(settings, 'DEFAULT_FROM_EMAIL', '') or 'ShieldNet <ilyf44118@gmail.com>'
+                if 'Security' in raw_from:
+                    raw_from = raw_from.replace('ShieldNet Security', 'ShieldNet')
+
+                msg = EmailMultiAlternatives(
+                    subject=subject,
+                    body=message,
+                    from_email=raw_from,
+                    to=[email],
+                    reply_to=['ilyf44118@gmail.com'],
+                )
+                msg.extra_headers = {
+                    'X-Priority': '1',
+                    'Priority': 'urgent',
+                    'Importance': 'high',
+                    'X-MSMail-Priority': 'High',
+                    'X-Mailer': 'ShieldNet Mail Delivery',
+                    'Auto-Submitted': 'auto-generated',
+                }
+                msg.attach_alternative(html_message, "text/html")
+                msg.send(fail_silently=False)
+                logging.getLogger('shield_api').info(f"Code OTP delivre avec succes a {email}")
+            except Exception as e:
+                import logging
+                logging.getLogger('shield_api').warning(f"Erreur envoi OTP a {email}: {e}")
+
+        import threading
+        threading.Thread(target=_send_otp_async, daemon=True).start()
+
+        return Response({
+            'detail': 'Code de vérification envoyé avec succès à votre adresse courriel.'
+        }, status=status.HTTP_200_OK)
+
 
 class VerifyEmailOTPView(APIView):
     """
     POST /api/v1/auth/email/verify-otp/
-    Verifie le code OTP a 6 chiffres et authentifie l'utilisateur.
+    Verifie le code OTP a 6 chiffres, met a jour le mot de passe si demande, et authentifie l'utilisateur.
     """
     permission_classes = [permissions.AllowAny]
     throttle_classes = [SensitiveOtpThrottle]
@@ -1545,28 +1770,34 @@ class VerifyEmailOTPView(APIView):
         if not cached_code or cached_code != code:
             return Response({'detail': 'Code de vérification incorrect ou expiré.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Invalidation du code utilisé
+        # Invalidation immédiate du code utilisé
         cache.delete(f'otp_{email}')
 
         # Récupération ou création automatique du compte
         user = User.objects.filter(email__iexact=email).first()
+        is_new_user = False
         if not user:
             username = email
             random_password = secrets.token_urlsafe(24)
             user = User.objects.create_user(username=username, email=email, password=random_password)
             UserProfile.objects.get_or_create(user=user)
             send_welcome_confirmation_email(user)
+            is_new_user = True
 
         new_password = request.data.get('new_password', '').strip()
         if user and new_password:
             user.set_password(new_password)
             user.save()
+            if not is_new_user:
+                send_password_changed_confirmation_email(user)
 
         refresh = RefreshToken.for_user(user)
         return Response({
+            'detail': 'Mot de passe modifié avec succès.' if new_password else 'Connexion réussie.',
             'user': UserSerializer(user).data,
             'tokens': {
                 'refresh': str(refresh),
                 'access': str(refresh.access_token),
             }
         }, status=status.HTTP_200_OK)
+

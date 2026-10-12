@@ -57,31 +57,35 @@ class _ObservabilityPageState extends ConsumerState<ObservabilityPage> {
                 top: 24,
                 bottom: MediaQuery.of(context).viewInsets.bottom + 24,
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.amber.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(10),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.rate_review, color: Colors.amber, size: 24),
                         ),
-                        child: const Icon(Icons.rate_review, color: Colors.amber, size: 24),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        isEn ? 'Structured User Feedback' : 'Retour Utilisateur Structuré',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            isEn ? 'Structured User Feedback' : 'Retour Utilisateur Structuré',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
                   const SizedBox(height: 16),
                   Text(
                     isEn ? 'Your overall rating:' : 'Votre évaluation globale :',
@@ -206,7 +210,8 @@ class _ObservabilityPageState extends ConsumerState<ObservabilityPage> {
                   ),
                 ],
               ),
-            );
+            ),
+          );
           },
         );
       },

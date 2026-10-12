@@ -53,144 +53,152 @@ class RegionalThreatCard extends ConsumerWidget {
       backgroundColor: Colors.transparent,
       builder: (ctx) {
         final isDark = Theme.of(ctx).brightness == Brightness.dark;
-        return Container(
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1E293B) : Colors.white,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 44,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  const Icon(Icons.radar_rounded, color: AppTheme.accentOrange, size: 24),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      isQuebec
-                          ? (isEn ? 'Quebec Scam Radar' : 'Radar des arnaques au Québec')
-                          : (l10n?.regionalRadarTitle ?? (isEn ? 'Regional Scam Radar' : 'Radar Régional des Arnaques')),
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        return SafeArea(
+          child: Container(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(ctx).size.height * 0.85,
+            ),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E293B) : Colors.white,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 44,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(2),
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                isQuebec
-                    ? (isEn
-                        ? 'Live alerts for area codes and cities across Quebec (Montreal, Quebec City, Laval, Gatineau...).'
-                        : 'Surveillance en direct des faux numéros ciblant les villes et indicatifs du Québec (Montréal, Québec, Laval, Gatineau...).')
-                    : (l10n?.regionalRadarDesc ??
-                        (isEn
-                            ? 'Real-time alert monitoring by area codes.'
-                            : 'Surveillance en direct des vagues de faux numéros par indicatif.')),
-                style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
-              ),
-              const SizedBox(height: 16),
-              ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxHeight: MediaQuery.of(context).size.height * 0.5,
                 ),
-                child: effectiveSummary.regions.isEmpty
-                    ? Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 24),
-                        child: Center(
-                          child: Text(
-                            isQuebec
-                                ? (isEn
-                                    ? 'No active scam waves detected in Quebec cities.'
-                                    : 'Aucune vague d\'arnaque active détectée dans les villes du Québec.')
-                                : (isEn ? 'No active alerts.' : 'Aucune alerte active.'),
-                            style: TextStyle(color: Colors.grey.shade600),
-                          ),
-                        ),
-                      )
-                    : ListView.separated(
-                        shrinkWrap: true,
-                        itemCount: effectiveSummary.regions.length,
-                        separatorBuilder: (context, index) => const Divider(height: 1),
-                        itemBuilder: (ctx, index) {
-                          final item = effectiveSummary.regions[index];
-                          final isCritical = item.isCritical;
-                          final isHigh = item.isHigh;
-                          final badgeColor = isCritical
-                              ? AppTheme.accentRed
-                              : (isHigh ? AppTheme.accentOrange : AppTheme.accentGreen);
-
-                          return ListTile(
-                            contentPadding: const EdgeInsets.symmetric(vertical: 4),
-                            leading: Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: badgeColor.withValues(alpha: 0.12),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                item.areaCode,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w900,
-                                  color: badgeColor,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ),
-                            title: Text(
-                              item.regionName,
-                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-                            ),
-                            subtitle: Text(
-                              '${item.totalSpams} ${l10n?.regionalReportsCount ?? (isEn ? "reports • Type:" : "signalements • Type :")} ${_formatCategory(item.topCategory, isEn)}',
-                              style: const TextStyle(fontSize: 12),
-                            ),
-                            trailing: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: badgeColor.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: badgeColor, width: 1),
-                              ),
-                              child: Text(
-                                _formatAlertLevel(item.alertLevel, isEn),
-                                style: TextStyle(
-                                  color: badgeColor,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 11,
-                                ),
-                              ),
-                            ),
-                          );
-                        },
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    const Icon(Icons.radar_rounded, color: AppTheme.accentOrange, size: 24),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        isQuebec
+                            ? (isEn ? 'Quebec Scam Radar' : 'Radar des arnaques au Québec')
+                            : (l10n?.regionalRadarTitle ?? (isEn ? 'Regional Scam Radar' : 'Radar Régional des Arnaques')),
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryColor,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
-                  child: Text(l10n?.btnUnderstood ?? 'Compris', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ],
                 ),
-              ),
-            ],
+                const SizedBox(height: 8),
+                Text(
+                  isQuebec
+                      ? (isEn
+                          ? 'Live alerts for area codes and cities across Quebec (Montreal, Quebec City, Laval, Gatineau...).'
+                          : 'Surveillance en direct des faux numéros ciblant les villes et indicatifs du Québec (Montréal, Québec, Laval, Gatineau...).')
+                      : (l10n?.regionalRadarDesc ??
+                          (isEn
+                              ? 'Real-time alert monitoring by area codes.'
+                              : 'Surveillance en direct des vagues de faux numéros par indicatif.')),
+                  style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                ),
+                const SizedBox(height: 12),
+                Flexible(
+                  child: effectiveSummary.regions.isEmpty
+                      ? Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 24),
+                          child: Center(
+                            child: Text(
+                              isQuebec
+                                  ? (isEn
+                                      ? 'No active scam waves detected in Quebec cities.'
+                                      : 'Aucune vague d\'arnaque active détectée dans les villes du Québec.')
+                                  : (isEn ? 'No active alerts.' : 'Aucune alerte active.'),
+                              style: TextStyle(color: Colors.grey.shade600),
+                            ),
+                          ),
+                        )
+                      : ListView.separated(
+                          shrinkWrap: true,
+                          itemCount: effectiveSummary.regions.length,
+                          separatorBuilder: (context, index) => const Divider(height: 1),
+                          itemBuilder: (ctx, index) {
+                            final item = effectiveSummary.regions[index];
+                            final isCritical = item.isCritical;
+                            final isHigh = item.isHigh;
+                            final badgeColor = isCritical
+                                ? AppTheme.accentRed
+                                : (isHigh ? AppTheme.accentOrange : AppTheme.accentGreen);
+
+                            return ListTile(
+                              contentPadding: const EdgeInsets.symmetric(vertical: 4),
+                              leading: Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: badgeColor.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  item.areaCode,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w900,
+                                    color: badgeColor,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ),
+                              title: Text(
+                                item.regionName,
+                                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              subtitle: Text(
+                                '${item.totalSpams} ${l10n?.regionalReportsCount ?? (isEn ? "reports • Type:" : "signalements • Type :")} ${_formatCategory(item.topCategory, isEn)}',
+                                style: const TextStyle(fontSize: 12),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              trailing: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: badgeColor.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: badgeColor, width: 1),
+                                ),
+                                child: Text(
+                                  _formatAlertLevel(item.alertLevel, isEn),
+                                  style: TextStyle(
+                                    color: badgeColor,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryColor,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    child: Text(l10n?.btnUnderstood ?? 'Compris', style: const TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -288,6 +296,8 @@ class RegionalThreatCard extends ConsumerWidget {
                             : 'Vague active d\'appels frauduleux ciblant : ${highest.regionName}.')
                         : (l10n?.regionalWaveDesc(highest.regionName) ?? 'Vague active d\'appels frauduleux ciblant la région : ${highest.regionName}.'),
                     style: const TextStyle(fontSize: 12, height: 1.3),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
