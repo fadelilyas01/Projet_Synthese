@@ -467,7 +467,9 @@ class _ActivityPageState extends ConsumerState<ActivityPage> with SingleTickerPr
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    l10n?.disputeFilteredNotice ?? 'Ce numéro est actuellement filtré par ShieldNet. S\'il s\'agit d\'un médecin, d\'un livreur ou d\'un proche légitime, vous pouvez contester ce blocage pour accélérer sa réhabilitation.',
+                    l10n?.disputeFilteredNotice ?? (isEn
+                        ? 'This number is currently blocked. If this is a doctor, delivery person, or family member, you can unblock it anytime.'
+                        : 'Ce numéro est actuellement bloqué. S\'il s\'agit d\'un médecin, d\'un livreur ou d\'un proche, vous pouvez le débloquer en un clic.'),
                     style: const TextStyle(fontSize: 13, height: 1.4),
                   ),
                 ),
@@ -508,7 +510,7 @@ class _ActivityPageState extends ConsumerState<ActivityPage> with SingleTickerPr
                       ),
                       icon: const Icon(Icons.verified_outlined, size: 18, color: AppTheme.primaryColor),
                       label: Text(
-                        l10n?.disputeBtnContest ?? 'Contester (Faux positif)',
+                        l10n?.disputeBtnContest ?? (isEn ? 'Unblock (Legitimate)' : 'Débloquer (Numéro légitime)'),
                         style: const TextStyle(color: AppTheme.primaryColor, fontWeight: FontWeight.bold),
                       ),
                       onPressed: () {
@@ -558,7 +560,7 @@ class _ActivityPageState extends ConsumerState<ActivityPage> with SingleTickerPr
                     children: [
                       Expanded(
                         child: Text(
-                          l10n?.disputeModalTitle ?? 'Contestation de Faux-Positif',
+                          l10n?.disputeModalTitle ?? (isEn ? 'Unblock Legitimate Caller' : 'Débloquer un numéro légitime'),
                           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                         ),
                       ),
@@ -575,7 +577,7 @@ class _ActivityPageState extends ConsumerState<ActivityPage> with SingleTickerPr
                 ),
                 const SizedBox(height: 14),
                 Text(
-                  l10n?.disputeCallNature ?? 'Nature de l\'appel légitime :',
+                  l10n?.disputeCallNature ?? (isEn ? 'Who is calling?' : 'Qui est ce correspondant ?'),
                   style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 10),
@@ -637,17 +639,17 @@ class _ActivityPageState extends ConsumerState<ActivityPage> with SingleTickerPr
                               String toastMessage;
                               if (isAutoWhitelisted) {
                                 toastMessage = isEn
-                                    ? 'Number unblocked! Community consensus validated: rehabilitated for all.'
-                                    : 'Numéro débloqué ! Consensus citoyen validé : réhabilité pour toute la communauté.';
+                                    ? 'Number unblocked and permanently allowed.'
+                                    : 'Numéro débloqué et autorisé pour vos prochains appels.';
                               } else if (isOfflineQueued) {
                                 toastMessage = isEn
-                                    ? 'Number unblocked locally! Dispute queued for synchronization.'
-                                    : 'Numéro débloqué localement ! Contestation mise en file d\'attente.';
+                                    ? 'Number unblocked on your phone!'
+                                    : 'Numéro débloqué sur votre téléphone !';
                               } else {
                                 toastMessage = l10n?.disputeSuccessToast ??
                                     (isEn
-                                        ? 'Number unblocked on your device! Review submitted.'
-                                        : 'Numéro débloqué sur votre appareil ! Avis transmis pour réhabilitation.');
+                                        ? 'Number unblocked and authorized!'
+                                        : 'Numéro débloqué et autorisé !');
                               }
 
                               messenger.showSnackBar(
@@ -815,6 +817,7 @@ class _ActivityPageState extends ConsumerState<ActivityPage> with SingleTickerPr
     }
 
     final blockedHashes = blockedList.map((b) => b.phoneHash).toSet();
+    final isEn = (l10n?.localeName == 'en') || (Localizations.localeOf(context).languageCode == 'en');
 
     final auditHeader = Container(
       margin: const EdgeInsets.only(bottom: 6),
@@ -840,11 +843,11 @@ class _ActivityPageState extends ConsumerState<ActivityPage> with SingleTickerPr
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  l10n?.auditHeaderTitle ?? 'Audit de sécurité du journal',
+                  l10n?.auditHeaderTitle ?? (isEn ? 'Check Recent Calls' : 'Vérifier mes appels récents'),
                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                 ),
                 Text(
-                  l10n?.auditHeaderDesc ?? 'Vérifie vos 50 derniers appels via le Cloud',
+                  l10n?.auditHeaderDesc ?? (isEn ? 'Scans your last 50 calls to detect potential spam' : 'Analyse vos 50 derniers appels pour détecter d\'éventuels spams'),
                   style: const TextStyle(color: Colors.grey, fontSize: 11),
                 ),
               ],
@@ -864,7 +867,7 @@ class _ActivityPageState extends ConsumerState<ActivityPage> with SingleTickerPr
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : Text(
-                    l10n?.auditHeaderBtn ?? 'Lancer',
+                    l10n?.auditHeaderBtn ?? (isEn ? 'Check' : 'Vérifier'),
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
                   ),
           ),
@@ -1062,7 +1065,7 @@ class _ActivityPageState extends ConsumerState<ActivityPage> with SingleTickerPr
                     Row(
                       children: [
                         Text(
-                          l10n?.publicThreatsBannerTitle ?? (isEn ? 'Threat Shield Active' : 'Bouclier Public Actif'),
+                          l10n?.publicThreatsBannerTitle ?? (isEn ? 'Automatic Protection Active' : 'Protection automatique active'),
                           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                         ),
                         const Spacer(),
@@ -1073,7 +1076,7 @@ class _ActivityPageState extends ConsumerState<ActivityPage> with SingleTickerPr
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
-                            '$publicThreatCount ${isEn ? "threats" : "menaces"}',
+                            '$publicThreatCount ${isEn ? "blocked" : "numéros bloqués"}',
                             style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.accentGreen),
                           ),
                         ),
@@ -1083,8 +1086,8 @@ class _ActivityPageState extends ConsumerState<ActivityPage> with SingleTickerPr
                     Text(
                       l10n?.publicThreatsBannerDesc(publicThreatCount) ??
                           (isEn
-                              ? '$publicThreatCount public threats and scam numbers are automatically blocked in the background without cluttering your personal blocklist.'
-                              : '$publicThreatCount arnaques et menaces publiques sont automatiquement neutralisées en arrière-plan sans encombrer vos blocages personnels.'),
+                              ? '$publicThreatCount known scams are automatically blocked in the background. Your personal blocklist is shown below.'
+                              : '$publicThreatCount arnaques connues sont automatiquement bloquées pour vous protéger. Vos blocages personnels sont listés ci-dessous.'),
                       style: const TextStyle(color: Colors.grey, fontSize: 11, height: 1.35),
                     ),
                   ],
@@ -1146,6 +1149,7 @@ class _ActivityPageState extends ConsumerState<ActivityPage> with SingleTickerPr
                             child: Padding(
                               padding: const EdgeInsets.all(32.0),
                               child: Column(
+                                mainAxisSize: MainAxisSize.min,
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Container(
@@ -1159,14 +1163,14 @@ class _ActivityPageState extends ConsumerState<ActivityPage> with SingleTickerPr
                                   const SizedBox(height: 18),
                                   Text(
                                     _searchFilter.isEmpty
-                                        ? (l10n?.noBlockedNumbers ?? 'Aucun numéro bloqué manuellement')
+                                        ? (l10n?.noBlockedNumbers ?? (isEn ? 'No personally blocked numbers' : 'Aucun numéro bloqué par vous'))
                                         : (l10n?.noResultsFound ?? 'Aucun résultat trouvé'),
                                     style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                                   ),
                                   const SizedBox(height: 6),
                                   Text(
                                     _searchFilter.isEmpty
-                                        ? (l10n?.noBlockedNumbersDesc ?? 'Les numéros que vous bloquez ou signalez apparaîtront ici. Le bouclier public ShieldNet filtre les arnaques connues en arrière-plan.')
+                                        ? (l10n?.noBlockedNumbersDesc ?? (isEn ? 'The numbers you block yourself will appear here. General scams are filtered automatically.' : 'Les numéros que vous décidez de bloquer s\'afficheront ici. Les arnaques connues sont déjà bloquées automatiquement.'))
                                         : (l10n?.tryAnotherSearch ?? 'Essayez avec un autre terme de recherche.'),
                                     textAlign: TextAlign.center,
                                     style: const TextStyle(color: Colors.grey, fontSize: 13, height: 1.4),

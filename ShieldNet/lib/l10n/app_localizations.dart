@@ -1565,61 +1565,61 @@ abstract class AppLocalizations {
   /// No description provided for @auditCompletedSpam.
   ///
   /// In fr, this message translates to:
-  /// **'Audit terminé : {count} numéro(s) suspect(s) identifié(s) dans votre journal.'**
+  /// **'Vérification terminée : {count} numéro(s) suspect(s) identifié(s) dans vos appels.'**
   String auditCompletedSpam(Object count);
 
   /// No description provided for @auditCompletedClean.
   ///
   /// In fr, this message translates to:
-  /// **'Audit terminé : Vos {count} appels récents sont sains.'**
+  /// **'Tout va bien : aucun spam parmi vos {count} appels récents.'**
   String auditCompletedClean(Object count);
 
   /// No description provided for @auditNetworkError.
   ///
   /// In fr, this message translates to:
-  /// **'Impossible d\'effectuer l\'audit réseau.'**
+  /// **'Impossible de vérifier les numéros pour l\'instant.'**
   String get auditNetworkError;
 
   /// No description provided for @auditNoVerifiableNumbers.
   ///
   /// In fr, this message translates to:
-  /// **'Aucun numéro vérifiable dans le journal récent.'**
+  /// **'Aucun numéro à vérifier dans vos appels récents.'**
   String get auditNoVerifiableNumbers;
 
   /// No description provided for @disputeModalTitle.
   ///
   /// In fr, this message translates to:
-  /// **'Contestation de Faux-Positif'**
+  /// **'Débloquer un numéro légitime'**
   String get disputeModalTitle;
 
   /// No description provided for @disputeCallNature.
   ///
   /// In fr, this message translates to:
-  /// **'Nature de l\'appel légitime :'**
+  /// **'Qui est ce correspondant ?'**
   String get disputeCallNature;
 
   /// No description provided for @disputeReasonService.
   ///
   /// In fr, this message translates to:
-  /// **'Service / Entreprise'**
+  /// **'Service ou Entreprise'**
   String get disputeReasonService;
 
   /// No description provided for @disputeReasonPersonal.
   ///
   /// In fr, this message translates to:
-  /// **'Personnel / Proche'**
+  /// **'Famille ou Proche'**
   String get disputeReasonPersonal;
 
   /// No description provided for @disputeReasonDelivery.
   ///
   /// In fr, this message translates to:
-  /// **'Livraison / Colis'**
+  /// **'Livraison ou Colis'**
   String get disputeReasonDelivery;
 
   /// No description provided for @disputeReasonMedical.
   ///
   /// In fr, this message translates to:
-  /// **'Santé / Médical'**
+  /// **'Médecin ou Santé'**
   String get disputeReasonMedical;
 
   /// No description provided for @disputeReasonMistake.
@@ -1631,7 +1631,7 @@ abstract class AppLocalizations {
   /// No description provided for @disputeCommentHint.
   ///
   /// In fr, this message translates to:
-  /// **'Précisions utiles (ex: cabinet de mon médecin traitant)'**
+  /// **'Précisions (ex: cabinet de mon médecin traitant)'**
   String get disputeCommentHint;
 
   /// No description provided for @disputeProtectedNumber.
@@ -1643,19 +1643,19 @@ abstract class AppLocalizations {
   /// No description provided for @disputeRiskScore.
   ///
   /// In fr, this message translates to:
-  /// **'Score de risque : {score}% ({count} signalement(s))'**
+  /// **'Niveau de risque : {score}% ({count} signalement(s))'**
   String disputeRiskScore(Object count, Object score);
 
   /// No description provided for @disputeFilteredNotice.
   ///
   /// In fr, this message translates to:
-  /// **'Ce numéro est actuellement filtré par ShieldNet. S\'il s\'agit d\'un médecin, d\'un livreur ou d\'un proche légitime, vous pouvez contester ce blocage pour accélérer sa réhabilitation.'**
+  /// **'Ce numéro est actuellement bloqué. S\'il s\'agit d\'un médecin, d\'un livreur ou d\'un proche, vous pouvez le débloquer en un clic.'**
   String get disputeFilteredNotice;
 
   /// No description provided for @disputeBtnContest.
   ///
   /// In fr, this message translates to:
-  /// **'Contester (Faux positif)'**
+  /// **'Débloquer (Numéro légitime)'**
   String get disputeBtnContest;
 
   /// No description provided for @serenitySecurityLevel.
@@ -1673,49 +1673,49 @@ abstract class AppLocalizations {
   /// No description provided for @deviceIntegrityRooted.
   ///
   /// In fr, this message translates to:
-  /// **'Sécurité Système : Appareil Rooté'**
+  /// **'Sécurité : Appareil modifié'**
   String get deviceIntegrityRooted;
 
   /// No description provided for @deviceIntegrityDesc.
   ///
   /// In fr, this message translates to:
-  /// **'Un accès super-utilisateur (su / Magisk) est présent. Les protections cryptographiques locales peuvent être vulnérables.'**
+  /// **'Votre appareil a été modifié (accès administrateur détecté). La protection locale pourrait être moins efficace.'**
   String get deviceIntegrityDesc;
 
   /// No description provided for @disputeSuccessToast.
   ///
   /// In fr, this message translates to:
-  /// **'Avis légitime transmis ! Le consensus communautaire évalue la réhabilitation.'**
+  /// **'Numéro débloqué et autorisé pour vos futurs appels !'**
   String get disputeSuccessToast;
 
   /// No description provided for @disputeErrorToast.
   ///
   /// In fr, this message translates to:
-  /// **'Impossible d\'enregistrer votre contestation.'**
+  /// **'Impossible de débloquer ce numéro pour l\'instant.'**
   String get disputeErrorToast;
 
   /// No description provided for @disputeSubmitBtn.
   ///
   /// In fr, this message translates to:
-  /// **'Transmettre la contestation'**
+  /// **'Débloquer et autoriser'**
   String get disputeSubmitBtn;
 
   /// No description provided for @auditHeaderTitle.
   ///
   /// In fr, this message translates to:
-  /// **'Audit de sécurité du journal'**
+  /// **'Vérifier mes appels récents'**
   String get auditHeaderTitle;
 
   /// No description provided for @auditHeaderDesc.
   ///
   /// In fr, this message translates to:
-  /// **'Vérifie vos 50 derniers appels via le Cloud'**
+  /// **'Analyse vos 50 derniers appels pour détecter d\'éventuels spams'**
   String get auditHeaderDesc;
 
   /// No description provided for @auditHeaderBtn.
   ///
   /// In fr, this message translates to:
-  /// **'Lancer'**
+  /// **'Vérifier'**
   String get auditHeaderBtn;
 
   /// No description provided for @adminFullAdmin.
@@ -1871,7 +1871,7 @@ abstract class AppLocalizations {
   /// No description provided for @faqCategoryEmergency.
   ///
   /// In fr, this message translates to:
-  /// **'Numéros d\'Urgence & Faux Positifs'**
+  /// **'Numéros d\'urgence et proches'**
   String get faqCategoryEmergency;
 
   /// No description provided for @faqCategoryPermissions.
@@ -1883,13 +1883,13 @@ abstract class AppLocalizations {
   /// No description provided for @publicThreatsBannerTitle.
   ///
   /// In fr, this message translates to:
-  /// **'Bouclier Public Actif'**
+  /// **'Protection automatique active'**
   String get publicThreatsBannerTitle;
 
   /// No description provided for @publicThreatsBannerDesc.
   ///
   /// In fr, this message translates to:
-  /// **'{count} arnaques et menaces publiques sont automatiquement neutralisées en arrière-plan sans encombrer vos blocages personnels.'**
+  /// **'{count} arnaques connues sont automatiquement bloquées pour vous protéger. Vos blocages personnels sont listés ci-dessous.'**
   String publicThreatsBannerDesc(Object count);
 
   /// No description provided for @unblockActionBtn.

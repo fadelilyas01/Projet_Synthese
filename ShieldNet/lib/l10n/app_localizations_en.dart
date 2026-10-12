@@ -792,26 +792,26 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String auditCompletedSpam(Object count) {
-    return 'Audit complete: $count suspect number(s) identified in your call log.';
+    return 'Check complete: $count suspicious call(s) identified in your call log.';
   }
 
   @override
   String auditCompletedClean(Object count) {
-    return 'Audit complete: Your $count recent calls are clean.';
+    return 'All clear: none of your $count recent calls are spam.';
   }
 
   @override
-  String get auditNetworkError => 'Unable to perform network audit.';
+  String get auditNetworkError => 'Unable to check numbers right now.';
 
   @override
   String get auditNoVerifiableNumbers =>
-      'No verifiable numbers in recent call log.';
+      'No numbers to check in recent call log.';
 
   @override
-  String get disputeModalTitle => 'False Positive Dispute';
+  String get disputeModalTitle => 'Unblock Legitimate Caller';
 
   @override
-  String get disputeCallNature => 'Nature of legitimate call:';
+  String get disputeCallNature => 'Who is calling?';
 
   @override
   String get disputeReasonService => 'Business / Service';
@@ -829,23 +829,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get disputeReasonMistake => 'Reporting mistake';
 
   @override
-  String get disputeCommentHint =>
-      'Useful details (e.g. my family doctor\'s office)';
+  String get disputeCommentHint => 'Details (e.g. my family doctor\'s office)';
 
   @override
   String get disputeProtectedNumber => 'Protected number';
 
   @override
   String disputeRiskScore(Object count, Object score) {
-    return 'Risk score: $score% ($count report(s))';
+    return 'Risk level: $score% ($count report(s))';
   }
 
   @override
   String get disputeFilteredNotice =>
-      'This number is currently filtered by ShieldNet. If this is a doctor, delivery person, or legitimate family member, you can dispute this block to accelerate whitelisting.';
+      'This number is currently blocked. If this is a doctor, delivery person, or family member, you can unblock it anytime.';
 
   @override
-  String get disputeBtnContest => 'Dispute (False positive)';
+  String get disputeBtnContest => 'Unblock (Legitimate caller)';
 
   @override
   String get serenitySecurityLevel => 'Security Level';
@@ -854,30 +853,31 @@ class AppLocalizationsEn extends AppLocalizations {
   String get serenityRecommendation => 'Recommendation';
 
   @override
-  String get deviceIntegrityRooted => 'System Security: Rooted Device';
+  String get deviceIntegrityRooted => 'Security: Modified Device';
 
   @override
   String get deviceIntegrityDesc =>
-      'Superuser access (su / Magisk) detected. Local cryptographic protections may be vulnerable.';
+      'Your device has administrator modifications. Local protections may be reduced.';
 
   @override
   String get disputeSuccessToast =>
-      'Legitimate report submitted! Community consensus is evaluating reinstatement.';
+      'Number unblocked and allowed for future calls!';
 
   @override
-  String get disputeErrorToast => 'Unable to record your dispute.';
+  String get disputeErrorToast => 'Unable to unblock this number right now.';
 
   @override
-  String get disputeSubmitBtn => 'Submit Dispute';
+  String get disputeSubmitBtn => 'Unblock and Allow';
 
   @override
-  String get auditHeaderTitle => 'Call Log Security Audit';
+  String get auditHeaderTitle => 'Check Recent Calls';
 
   @override
-  String get auditHeaderDesc => 'Scans your last 50 calls via Cloud';
+  String get auditHeaderDesc =>
+      'Scans your last 50 calls to detect potential spam';
 
   @override
-  String get auditHeaderBtn => 'Scan';
+  String get auditHeaderBtn => 'Check';
 
   @override
   String get adminFullAdmin => 'Full Administration';
@@ -959,17 +959,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get faqCategoryPrivacy => 'Privacy & Data Protection';
 
   @override
-  String get faqCategoryEmergency => 'Emergency Numbers & False Positives';
+  String get faqCategoryEmergency => 'Emergency & Essential Numbers';
 
   @override
   String get faqCategoryPermissions => 'Android Permissions';
 
   @override
-  String get publicThreatsBannerTitle => 'Threat Shield Active';
+  String get publicThreatsBannerTitle => 'Automatic Protection Active';
 
   @override
   String publicThreatsBannerDesc(Object count) {
-    return '$count public threats and scam numbers are automatically blocked in the background without cluttering your personal blocklist.';
+    return '$count known scams are automatically blocked in the background. Your personal blocklist is shown below.';
   }
 
   @override

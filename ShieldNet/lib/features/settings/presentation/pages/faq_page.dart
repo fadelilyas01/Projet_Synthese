@@ -131,8 +131,8 @@ class _HelpFaqPageState extends State<HelpFaqPage> {
         ),
         FaqCategoryInfo(
           id: 'urgences',
-          title: 'Numéros importants & contestations',
-          description: 'Numéros d\'urgence, faux positifs et comment débloquer un appel légitime.',
+          title: 'Numéros importants & Déblocage',
+          description: 'Numéros d\'urgence et comment débloquer un appel légitime.',
           icon: Icons.emergency_rounded,
         ),
         FaqCategoryInfo(
@@ -503,8 +503,8 @@ class _HelpFaqPageState extends State<HelpFaqPage> {
                       Expanded(
                         child: Text(
                           isFr
-                              ? 'Contestation urgente de faux positif : Vous pouvez contester un numéro directement dans l\'onglet Activité via « Avis Sûr ». Le consensus s\'applique en ~10 minutes.'
-                              : 'Urgent false positive dispute: You can contest a blocked caller directly from the Activity tab using "Safe Review". Consensus propagates in ~10 minutes.',
+                              ? 'Débloquer un numéro : Vous pouvez débloquer un contact ou un proche directement depuis l\'onglet Activité en le sélectionnant.'
+                              : 'Unblocking a caller: You can unblock any caller directly from the Activity tab by selecting the number.',
                           style: TextStyle(fontSize: 12, height: 1.4, color: isDark ? Colors.green[200] : Colors.green[800]),
                         ),
                       ),

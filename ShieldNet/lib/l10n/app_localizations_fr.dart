@@ -800,60 +800,61 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String auditCompletedSpam(Object count) {
-    return 'Audit terminé : $count numéro(s) suspect(s) identifié(s) dans votre journal.';
+    return 'Vérification terminée : $count numéro(s) suspect(s) identifié(s) dans vos appels.';
   }
 
   @override
   String auditCompletedClean(Object count) {
-    return 'Audit terminé : Vos $count appels récents sont sains.';
+    return 'Tout va bien : aucun spam parmi vos $count appels récents.';
   }
 
   @override
-  String get auditNetworkError => 'Impossible d\'effectuer l\'audit réseau.';
+  String get auditNetworkError =>
+      'Impossible de vérifier les numéros pour l\'instant.';
 
   @override
   String get auditNoVerifiableNumbers =>
-      'Aucun numéro vérifiable dans le journal récent.';
+      'Aucun numéro à vérifier dans vos appels récents.';
 
   @override
-  String get disputeModalTitle => 'Contestation de Faux-Positif';
+  String get disputeModalTitle => 'Débloquer un numéro légitime';
 
   @override
-  String get disputeCallNature => 'Nature de l\'appel légitime :';
+  String get disputeCallNature => 'Qui est ce correspondant ?';
 
   @override
-  String get disputeReasonService => 'Service / Entreprise';
+  String get disputeReasonService => 'Service ou Entreprise';
 
   @override
-  String get disputeReasonPersonal => 'Personnel / Proche';
+  String get disputeReasonPersonal => 'Famille ou Proche';
 
   @override
-  String get disputeReasonDelivery => 'Livraison / Colis';
+  String get disputeReasonDelivery => 'Livraison ou Colis';
 
   @override
-  String get disputeReasonMedical => 'Santé / Médical';
+  String get disputeReasonMedical => 'Médecin ou Santé';
 
   @override
   String get disputeReasonMistake => 'Erreur de signalement';
 
   @override
   String get disputeCommentHint =>
-      'Précisions utiles (ex: cabinet de mon médecin traitant)';
+      'Précisions (ex: cabinet de mon médecin traitant)';
 
   @override
   String get disputeProtectedNumber => 'Numéro protégé';
 
   @override
   String disputeRiskScore(Object count, Object score) {
-    return 'Score de risque : $score% ($count signalement(s))';
+    return 'Niveau de risque : $score% ($count signalement(s))';
   }
 
   @override
   String get disputeFilteredNotice =>
-      'Ce numéro est actuellement filtré par ShieldNet. S\'il s\'agit d\'un médecin, d\'un livreur ou d\'un proche légitime, vous pouvez contester ce blocage pour accélérer sa réhabilitation.';
+      'Ce numéro est actuellement bloqué. S\'il s\'agit d\'un médecin, d\'un livreur ou d\'un proche, vous pouvez le débloquer en un clic.';
 
   @override
-  String get disputeBtnContest => 'Contester (Faux positif)';
+  String get disputeBtnContest => 'Débloquer (Numéro légitime)';
 
   @override
   String get serenitySecurityLevel => 'Niveau de sécurité';
@@ -862,31 +863,32 @@ class AppLocalizationsFr extends AppLocalizations {
   String get serenityRecommendation => 'Recommandation';
 
   @override
-  String get deviceIntegrityRooted => 'Sécurité Système : Appareil Rooté';
+  String get deviceIntegrityRooted => 'Sécurité : Appareil modifié';
 
   @override
   String get deviceIntegrityDesc =>
-      'Un accès super-utilisateur (su / Magisk) est présent. Les protections cryptographiques locales peuvent être vulnérables.';
+      'Votre appareil a été modifié (accès administrateur détecté). La protection locale pourrait être moins efficace.';
 
   @override
   String get disputeSuccessToast =>
-      'Avis légitime transmis ! Le consensus communautaire évalue la réhabilitation.';
+      'Numéro débloqué et autorisé pour vos futurs appels !';
 
   @override
   String get disputeErrorToast =>
-      'Impossible d\'enregistrer votre contestation.';
+      'Impossible de débloquer ce numéro pour l\'instant.';
 
   @override
-  String get disputeSubmitBtn => 'Transmettre la contestation';
+  String get disputeSubmitBtn => 'Débloquer et autoriser';
 
   @override
-  String get auditHeaderTitle => 'Audit de sécurité du journal';
+  String get auditHeaderTitle => 'Vérifier mes appels récents';
 
   @override
-  String get auditHeaderDesc => 'Vérifie vos 50 derniers appels via le Cloud';
+  String get auditHeaderDesc =>
+      'Analyse vos 50 derniers appels pour détecter d\'éventuels spams';
 
   @override
-  String get auditHeaderBtn => 'Lancer';
+  String get auditHeaderBtn => 'Vérifier';
 
   @override
   String get adminFullAdmin => 'Administration Totale';
@@ -969,17 +971,17 @@ class AppLocalizationsFr extends AppLocalizations {
   String get faqCategoryPrivacy => 'Confidentialité & Données';
 
   @override
-  String get faqCategoryEmergency => 'Numéros d\'Urgence & Faux Positifs';
+  String get faqCategoryEmergency => 'Numéros d\'urgence et proches';
 
   @override
   String get faqCategoryPermissions => 'Permissions Android';
 
   @override
-  String get publicThreatsBannerTitle => 'Bouclier Public Actif';
+  String get publicThreatsBannerTitle => 'Protection automatique active';
 
   @override
   String publicThreatsBannerDesc(Object count) {
-    return '$count arnaques et menaces publiques sont automatiquement neutralisées en arrière-plan sans encombrer vos blocages personnels.';
+    return '$count arnaques connues sont automatiquement bloquées pour vous protéger. Vos blocages personnels sont listés ci-dessous.';
   }
 
   @override
