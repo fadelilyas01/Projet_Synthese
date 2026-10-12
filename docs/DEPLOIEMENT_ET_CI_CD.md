@@ -15,7 +15,7 @@ L'infrastructure s'articule autour de services éprouvés, simples à maintenir 
 | **Nginx** | Serveur web & Reverse Proxy | Terminaison HTTPS (TLS 1.3), distribution directe des fichiers statiques et transmission des requêtes à Gunicorn. |
 | **PostgreSQL 16** | Base de données principale | Stockage relationnel optimisé avec index B-Tree sur les empreintes hexadécimales HMAC (SQLite utilisable en local). |
 | **Redis 7** | Cache et limitation de requêtes | Utilisé pour le cache applicatif et la limitation du débit de requêtes (*rate limiting*). |
-| **Jenkins LTS** | Intégration continue | Exécution automatique des 109 tests (74 backend, 35 mobile), vérification du linter et compilation de l'APK Android. |
+| **Jenkins LTS** | Intégration continue | Exécution automatique des 145 tests (78 backend, 67/71 mobile), vérification du linter et compilation de l'APK Android. |
 
 ---
 

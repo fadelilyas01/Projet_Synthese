@@ -114,6 +114,8 @@ Pour prémunir le backend contre les erreurs d'inattention et les fuites d'infor
 |---|---|
 | **Protection dès la conception (Art. 21.4)** | Utilisation exclusive d'empreintes HMAC-SHA256 non réversibles dès la saisie du numéro sur le terminal. |
 | **Minimisation des données (Art. 4)** | Aucune lecture ni transfert du carnet de contacts personnels. Seules les données strictement utiles au filtrage sont manipulées. |
-| **Droit à l'effacement et rétention limitée** | Commande automatisée de purge (`purge_stale_reports`) supprimant les signalements inactifs au-delà de 90 jours. |
+| **Séparation de la liste personnelle** | L'espace des numéros bloqués par l'utilisateur reste strictement personnel et dissocié de la base globale du serveur. |
+| **Territorialité des alertes (Québec)** | Le radar régional filtre rigoureusement les données pour afficher uniquement les indicatifs et villes du Québec, protégeant l'utilisateur de toute diffusion inutile. |
+| **Droit à l'effacement et rétention limitée** | Commande automatisée de purge (`purge_stale_reports`) supprimant les signalements inactifs au-delà de 90 jours (30 jours sous profil Québec strict). |
 | **Droit de rectification et contestation** | Possibilité pour tout détenteur d'un numéro légitime de soumettre une contestation citoyenne pour réhabiliter son numéro. |
 | **Imputabilité et traçabilité** | Journalisation complète et inaltérable des interventions des modérateurs dans la table `AuditLog`. |

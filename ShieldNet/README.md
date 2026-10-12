@@ -93,22 +93,26 @@ ShieldNet/
 │   ├── l10n/                                  # Traductions bilingues ARB (français et anglais)
 │   └── main.dart                              # Point d'entrée de l'application
 │
-└── test/                                      # 67 tests automatisés (100% de réussite)
+└── test/                                      # 71 tests automatisés (100% de réussite)
     ├── services/                              # Tests auth, api, session timeout et observabilité
-    └── unit/                                  # Tests IA prédictive, crypto et filtrage d'appels
+    └── unit/                                  # Tests radar Québec, IA prédictive, crypto et filtrage d'appels
 ```
 
 ---
 
 ## 4. Fonctionnalités clés
 
+- **Démarrage instantané (0 ms de latence perçue)** : Pré-initialisation parallèle (`Future.wait`) de la configuration, des préférences et de l'utilisateur. Suppression totale des écrans de chargement et affichage immédiat de l'écran d'accueil.
+- **Radar des arnaques au Québec & territorialisé** : Les résidents québécois voient exclusivement les alertes ciblant les indicatifs québécois (514, 438, 450, 418, 819...) et leurs villes (Montréal, Laval, Québec, Gatineau...). Tous les indicatifs des autres provinces ou États américains sont automatiquement exclus.
+- **Espace « Mes numéros bloqués » strictement personnel** : Dans l'onglet des numéros bloqués, seuls les numéros que l'utilisateur a lui-même bloqués sont visibles et gérables, garantissant une clarté totale sans mélanger les données globales du serveur.
+- **Zéro jargon informatique** : Toute l'interface est formulée en français naturel (« Vérifier mes appels », « Signaler comme sûr », « Faux numéros usurpés » au lieu de jargon technique intimidant).
 - **Filtrage silencieux et automatique** : Bloque les numéros indésirables avant la première sonnerie (< 2 ms).
 - **Modes Bouclier Avancés** :
   - **Mode Contacts Uniquement (Bouclier Strict)** : Seuls vos contacts enregistrés font sonner le téléphone.
   - **Mode Bouclier Nocturne** : Filtrage silencieux automatique sur plage horaire personnalisée pour préserver votre sommeil.
 - **Immunité totale des urgences** : Les services d'urgence (911, 811, 988, etc.) et les contacts protégés ne sont jamais bloqués.
 - **Fonctionnement hors-ligne d'abord (Offline-First)** : Le filtrage fonctionne sans connexion. Les signalements hors-ligne sont synchronisés dès le retour du réseau.
-- **Contestation citoyenne** : Permet de certifier un faux positif comme légitime directement depuis l'historique d'appels.
+- **Contestation citoyenne** : Permet de certifier un numéro légitime directement depuis l'historique d'appels pour protéger la communauté.
 - **Vérification unitaire et prédiction IA** : Diagnostic heuristique et analyse par intelligence artificielle des indicatifs et schémas d'usurpation (*Neighbor Spoofing*, *Burst Dialing*, entropie de Shannon).
 - **Inspecteur de SMS frauduleux** : Analyse locale des messages suspects avec score explicite, surbrillance des mots-clés dangereux et analyse de réputation des liens web.
 - **Conformité visuelle Loi 25 & Vie privée** : Page de transparence expliquant l'absence de collecte de carnet d'adresses et les garanties cryptographiques.
@@ -145,7 +149,7 @@ flutter pub get
 # Générer les fichiers de langues
 flutter gen-l10n
 
-# Lancer la suite de 67 tests automatisés
+# Lancer la suite de tests automatisés (71 tests)
 flutter test
 
 # Vérifier l'analyse statique du code (0 avertissement)

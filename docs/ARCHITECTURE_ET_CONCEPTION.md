@@ -401,3 +401,60 @@ sequenceDiagram
     
     Admin->>Backend: Suivi et ajustements manuels éventuels par les administrateurs
 ```
+
+---
+
+### 5.5. Radar régional des arnaques et filtrage territorialisé (Québec)
+Pour offrir une protection immédiate et pertinente sans encombrer l'utilisateur avec des alertes hors de son périmètre géographique, ShieldNet adapte dynamiquement le flux d'alertes à la province de l'utilisateur :
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Utilisateur as Utilisateur au Québec
+    participant App as "Application Mobile (Dashboard / Radar)"
+    participant Provider as "regionalThreatsProvider"
+    participant Backend as "API Django (/api/v1/threats/regional/?province=QC)"
+    participant ThreatService as "RegionalThreatIntelligenceService"
+
+    Utilisateur->>App: Ouverture de l'accueil
+    App->>Provider: Lecture de la région (province = 'QC')
+    Provider->>Backend: GET /api/v1/threats/regional/?province=QC
+    Backend->>ThreatService: get_regional_threat_report(province='QC')
+    
+    Note over ThreatService: Filtrage strict : indicatifs 514, 438, 263, 450, 579, 354, 418, 581, 367, 819, 873, 468
+    Note over ThreatService: Exclusion totale des autres provinces (ON 416...) et États US (NY 212...)
+    ThreatService-->>Backend: Rapport filtré (Montréal, Laval, Québec, Gatineau...)
+    Backend-->>Provider: Réponse 200 OK (liste épurée des villes québécoises)
+    Provider-->>App: Affichage du « Radar des arnaques au Québec »
+    App->>Utilisateur: Bandeau « Alerte Québec • (514) » et liste détaillée locale
+```
+
+---
+
+### 5.6. Architecture de démarrage instantané et fluidité (0 ms de délai perçu)
+Pour éliminer les temps de chargement et l'impression d'application figée au lancement, le pipeline d'initialisation de ShieldNet sépare les tâches critiques des opérations secondaires :
+
+```mermaid
+flowchart TD
+    subgraph Boot_Phase ["Phase 1 : Démarrage parallèle ultra-rapide (< 15 ms)"]
+        BootInit["WidgetsFlutterBinding.ensureInitialized()"]
+        ParallelTasks["Future.wait([\n  dotenv.load(),\n  SharedPreferences.getInstance(),\n  AuthService.getCurrentUser()\n])"]
+        BootInit --> ParallelTasks
+    end
+
+    subgraph First_Frame ["Phase 2 : Rendu immédiat (Frame 1 - 0 ms de délai)"]
+        MountUI["Montage immédiat de MainTabNavigationScreen\n(Pas d'écran intermédiaire ni spinner de chargement)"]
+        ParallelTasks --> MountUI
+    end
+
+    subgraph Deferred_IO ["Phase 3 : Tâches de fond différées (> 700 ms - 2.5 s)"]
+        DeferredDB["Ouverture et migration SQLite locale"]
+        DeferredSync["Vérification presse-papier & Métriques appels récents"]
+        DeferredServices["Initialisation WorkManager & Tâches d'arrière-plan"]
+        MountUI -.->|"Après premier affichage"| DeferredDB
+        MountUI -.->|"Après premier affichage"| DeferredSync
+        MountUI -.->|"Après 2.5 secondes"| DeferredServices
+    end
+```
+
+Grâce à ce découpage, l'utilisateur a la main immédiatement, les gestes tactiles répondent sans aucune latence et les opérations lourdes d'I/O s'exécutent en arrière-plan en toute transparence.

@@ -8,13 +8,14 @@ Développé avec **Python 3.12**, **Django 5.x** et **Django REST Framework (DRF
 
 ## 1. Rôle du serveur dans l'architecture
 
-Le serveur assure quatre fonctions principales :
+Le serveur assure six fonctions principales :
 
 1. **Synchronisation incrémentale de la liste de blocage** : Permet à l'application mobile de ne télécharger que les modifications récentes (nouveaux numéros bloqués ou numéros réhabilités), réduisant au minimum la consommation de données et de batterie.
 2. **Collecte anonymisée des signalements** : Réception des signalements sous forme d'empreintes cryptographiques HMAC-SHA256. Aucun numéro de téléphone en clair n'est stocké dans la base de données.
 3. **Moteur d'arbitrage et consensus citoyen** : Analyse les contestations pour identifier les faux positifs (numéros de livreurs, cliniques, services essentiels signalés par erreur) et réhabiliter automatiquement les correspondants légitimes.
-4. **Authentification, Sessions & Récupération sécurisée** : Authentification par email/mot de passe, Google Sign-In, codes de vérification OTP par courriel pour réinitialisation de mot de passe, et jetons JWT (access & refresh).
-5. **Console d'administration et de modération** : Interface web claire permettant aux gestionnaires d'examiner les signalements en attente, de vérifier les métriques du système et de gérer les listes de blocage.
+4. **Veille et radar des arnaques par région** : Détection en temps réel des vagues d'attaques téléphoniques groupées par indicatif et filtrage territorialisé (Québec / indicatifs 514, 438, 450, 418, 819... ou autres juridictions).
+5. **Authentification, Sessions & Récupération sécurisée** : Authentification par email/mot de passe, Google Sign-In, codes de vérification OTP par courriel pour réinitialisation de mot de passe, et jetons JWT (access & refresh).
+6. **Console d'administration et de modération** : Interface web claire permettant aux gestionnaires d'examiner les signalements en attente, de vérifier les métriques du système et de gérer les listes de blocage.
 
 ---
 
@@ -44,6 +45,7 @@ Toutes les requêtes de l'application cliente sont sécurisées par clé d'API (
 | `GET` | `/api/v1/check/<hash>/` | Vérification unitaire du statut d'un numéro |
 | `POST` | `/api/v1/check/batch/` | Vérification groupée de plusieurs numéros récents |
 | `GET` | `/api/v1/ai/diagnose/?phone_number=...` | Analyse et explications claires sur un numéro |
+| `GET` | `/api/v1/threats/regional/?province=QC` | Veille et radar des arnaques ciblées par indicatif (filtrage strict Québec / ville) |
 | `GET` | `/api/v1/compliance/norms/` | Règles réglementaires applicables par région |
 | `GET` | `/api/v1/health/` | Sonde de bon fonctionnement du serveur et de la base |
 

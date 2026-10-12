@@ -11,9 +11,13 @@ Contrairement à la majorité des applications commerciales qui aspirent le carn
 1. **Aucune collecte de carnet d'adresses** : Les contacts personnels restent strictement dans la mémoire du téléphone. Aucun contact n'est extrait, transmis ou indexé sur un serveur distant.
 2. **Données anonymisées par empreinte (HMAC-SHA256)** : Les numéros signalés ne transitent jamais en clair. Ils sont convertis en empreintes cryptographiques avec un sel d'infrastructure avant tout échange réseau.
 3. **Interception locale instantanée (< 2 ms)** : Sur Android, le filtrage s'appuie sur le service système `CallScreeningService` et une base SQLite locale en mode WAL (*Write-Ahead Logging*). La vérification prend moins de 2 millisecondes, permettant de bloquer l'appel avant même la première sonnerie.
-4. **Sécurité de session et contrôle d'accès renforcé** : Verrouillage automatique de session après **5 minutes d'inactivité ou de mise en arrière-plan**, déverrouillage biométrique prioritaire (Face ID / Empreinte digitale) et récupération de mot de passe par code OTP à 6 chiffres par courriel.
-5. **Prévention des faux positifs & Consensus citoyen** : Pour éviter de bloquer des numéros légitimes (hôpitaux, cliniques médicales, pharmacies, livreurs), le système combine les avis favorables de la communauté et les attestations télécom STIR/SHAKEN.
-6. **Immunité absolue des urgences** : Les numéros d'urgence (911, 811, 988, etc.) ainsi que les contacts favoris de l'utilisateur sont protégés et ne peuvent jamais être filtrés.
+4. **Démarrage instantané (0 ms de latence perçue)** : Pré-chargement asynchrone parallélisé au boot (< 15 ms), élimination des écrans de chargement clignotants et accès direct à l'interface principale dès l'ouverture.
+5. **Radar des arnaques au Québec et par région** : Surveillance ciblée des vagues d'usurpation d'indicatifs. Si l'utilisateur réside au Québec, seules les alertes de ses indicatifs (514, 438, 450, 418, 819...) et de ses villes sont affichées, à l'exclusion stricte des autres provinces et États.
+6. **Espace « Mes numéros bloqués » strictement privé** : L'onglet des numéros bloqués affiche exclusivement les numéros que l'utilisateur a lui-même bloqués personnellement, sans les mélanger avec la base de données globale du serveur.
+7. **Sécurité de session et contrôle d'accès renforcé** : Verrouillage automatique de session après **5 minutes d'inactivité ou de mise en arrière-plan**, déverrouillage biométrique prioritaire (Face ID / Empreinte digitale) et récupération de mot de passe par code OTP à 6 chiffres par courriel.
+8. **Prévention des faux positifs & Avis citoyen** : Pour éviter de bloquer des correspondants légitimes (hôpitaux, cliniques médicales, pharmacies, livreurs), le système combine les avis de la communauté et les attestations télécom STIR/SHAKEN.
+9. **Immunité absolue des urgences** : Les numéros d'urgence (911, 811, 988, etc.) ainsi que les contacts favoris de l'utilisateur sont protégés et ne peuvent jamais être filtrés.
+10. **Zéro jargon informatique** : Interface conçue pour tous en français naturel (« Vérifier mes appels », « Signaler comme sûr », « Faux numéros usurpés » au lieu de jargon technique intimidant).
 
 ---
 
@@ -149,4 +153,4 @@ docker exec shieldnet_jenkins cat /var/jenkins_home/secrets/initialAdminPassword
 ```
 
 L'interface web est accessible à l'adresse : **[http://localhost:8080](http://localhost:8080)**.
-Le pipeline exécute automatiquement les 136 tests et archive l'APK téléchargeable à chaque commit.
+Le pipeline exécute automatiquement les 145 tests et archive l'APK téléchargeable à chaque commit.
