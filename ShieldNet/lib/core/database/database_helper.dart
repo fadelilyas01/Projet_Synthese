@@ -305,9 +305,9 @@ class DatabaseHelper {
       final count = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM blacklist')) ?? 0;
       if (count < 10) {
         await _seedPreloadedThreatIntel(db);
+        // Sécurité absolue : garantir que les menaces publiques non déclarées par l'utilisateur restent à 0
+        await db.rawUpdate('UPDATE blacklist SET is_user_reported = 0 WHERE is_user_reported IS NULL');
       }
-      // Sécurité absolue : garantir que les menaces publiques non déclarées par l'utilisateur restent à 0
-      await db.rawUpdate('UPDATE blacklist SET is_user_reported = 0 WHERE is_user_reported IS NULL');
     } catch (e) {
       AppLogger.log('[DatabaseHelper] Erreur vérification amorçage Threat Intelligence: $e');
     }

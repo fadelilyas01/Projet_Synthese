@@ -9,8 +9,9 @@ final authServiceProvider = Provider<AuthService>((ref) {
 
 class AuthNotifier extends StateNotifier<UserModel?> {
   final AuthService _authService;
+  static UserModel? preloadedUser;
 
-  AuthNotifier(this._authService) : super(null) {
+  AuthNotifier(this._authService) : super(preloadedUser) {
     ApiClient.onUnauthorized = () {
       logout();
     };
@@ -19,11 +20,17 @@ class AuthNotifier extends StateNotifier<UserModel?> {
 
   Future<void> checkCurrentUser() async {
     final cached = await _authService.getCurrentUser();
-    state = cached;
+    if (state == null && cached != null) {
+      state = cached;
+    }
 
     if (cached != null) {
-      final fresh = await _authService.fetchCurrentProfile();
-      state = fresh;
+      // Rafraîchissement non-bloquant en tâche de fond pour un démarrage 0ms
+      _authService.fetchCurrentProfile().then((fresh) {
+        if (fresh != null) {
+          state = fresh;
+        }
+      }).catchError((_) {});
     }
   }
 

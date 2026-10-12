@@ -26,8 +26,8 @@ class AuthGate extends ConsumerStatefulWidget {
 class _AuthGateState extends ConsumerState<AuthGate> with WidgetsBindingObserver {
   final BiometricService _biometricService = BiometricService();
   final SessionTimeoutService _sessionTimeout = SessionTimeoutService.instance;
-  bool _isBiometricUnlocked = false;
-  bool _isCheckingBiometrics = true;
+  bool _isBiometricUnlocked = true;
+  bool _isCheckingBiometrics = false;
 
   @override
   void initState() {
@@ -79,16 +79,17 @@ class _AuthGateState extends ConsumerState<AuthGate> with WidgetsBindingObserver
 
     final enabled = await _biometricService.isBiometricEnabled();
     if (!enabled) {
-      if (mounted) {
-        setState(() {
-          _isBiometricUnlocked = true;
-          _isCheckingBiometrics = false;
-        });
-      }
       return;
     }
 
-    // Si la protection biométrique est activée en paramètres, exiger strictement la vérification
+    // Si la protection biométrique est explicitement activée en paramètres
+    if (mounted) {
+      setState(() {
+        _isBiometricUnlocked = false;
+        _isCheckingBiometrics = true;
+      });
+    }
+
     final authenticated = await _biometricService.authenticate(
       reason: 'Authentifiez-vous par biométrie pour déverrouiller ShieldNet',
       biometricOnly: true,

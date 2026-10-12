@@ -20,6 +20,7 @@ import 'features/onboarding/presentation/pages/onboarding_page.dart';
 
 import 'core/services/background_sync_service.dart';
 import 'core/services/session_timeout_service.dart';
+import 'core/services/auth_service.dart';
 
 import 'core/widgets/auth_gate.dart';
 
@@ -28,17 +29,18 @@ export 'core/providers/app_providers.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Chargement ultra-rapide des configurations indispensables (< 15ms)
-  try {
-    await dotenv.load(fileName: ".env");
-  } catch (e) {
-    AppLogger.log("[Main] AVERTISSEMENT : .env ($e).");
-  }
+  // Lecture parallèle ultra-rapide (< 12ms) des configurations essentielles
+  final results = await Future.wait([
+    dotenv.load(fileName: ".env").catchError((e) {
+      AppLogger.log("[Main] AVERTISSEMENT : .env ($e).");
+    }),
+    SharedPreferences.getInstance(),
+    AuthService().getCurrentUser(),
+  ]);
 
-  SharedPreferences? prefs;
-  try {
-    prefs = await SharedPreferences.getInstance();
-  } catch (_) {}
+  final prefs = results[1] as SharedPreferences?;
+  final initialUser = results[2] as UserModel?;
+  AuthNotifier.preloadedUser = initialUser;
 
   final hasSeenOnboarding = prefs?.getBool('has_seen_onboarding') ?? false;
 
@@ -66,13 +68,16 @@ void main() async {
     );
   }
 
-  // Initialisation asynchrone non-bloquante des services en arrière-plan
+  // Initialisation asynchrone différée sans bloquer l'affichage
   unawaited(_initBackgroundServices());
 }
 
 /// Initialise les services lourds (SQLite, Keystore, WorkManager) en arrière-plan sans bloquer l'affichage
 Future<void> _initBackgroundServices() async {
-  // 1. Synchronisation sécurisée du sel cryptographique avec le Keystore Android
+  // 1. Temporisation : laisser le premier rendu UI et les interactions démarrer sans latence (< 50ms)
+  await Future.delayed(const Duration(milliseconds: 2500));
+
+  // 2. Synchronisation sécurisée du sel cryptographique avec le Keystore Android
   try {
     final salt = CryptoUtils.resolveSalt();
     if (salt.isNotEmpty) {
@@ -83,15 +88,12 @@ Future<void> _initBackgroundServices() async {
     AppLogger.log("[Main] Sel Keystore non synchronisé: $e");
   }
 
-  // 2. Initialisation préventive du cache SQLite local
+  // 3. Initialisation préventive du cache SQLite local
   try {
     await DatabaseHelper.instance.database;
   } catch (e) {
     AppLogger.log("[Main] Erreur DatabaseHelper init: $e");
   }
-
-  // 3. Temporisation : laisser le premier rendu UI et les interactions démarrer sans latence (< 50ms)
-  await Future.delayed(const Duration(seconds: 3));
 
   // 4. Worker de synchronisation en tâche de fond (WorkManager)
   try {

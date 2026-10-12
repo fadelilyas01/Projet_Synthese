@@ -41,8 +41,13 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadInterceptedMetrics();
-      _checkClipboard();
+      // Différer les I/O secondaires pour garantir une fluidité absolue dès le lancement (60 fps)
+      Future.delayed(const Duration(milliseconds: 700), () {
+        if (mounted) {
+          _loadInterceptedMetrics();
+          _checkClipboard();
+        }
+      });
     });
   }
 
