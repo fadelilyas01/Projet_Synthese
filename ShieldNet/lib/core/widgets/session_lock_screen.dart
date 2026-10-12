@@ -25,7 +25,7 @@ class SessionLockScreen extends ConsumerStatefulWidget {
   ConsumerState<SessionLockScreen> createState() => _SessionLockScreenState();
 }
 
-class _SessionLockScreenState extends ConsumerState<SessionLockScreen> with WidgetsBindingObserver {
+class _SessionLockScreenState extends ConsumerState<SessionLockScreen> {
   final BiometricService _biometricService = BiometricService();
   final TextEditingController _passwordController = TextEditingController();
 
@@ -34,13 +34,14 @@ class _SessionLockScreenState extends ConsumerState<SessionLockScreen> with Widg
   bool _isLoadingPassword = false;
   bool _obscurePassword = true;
   String? _errorMessage;
+  bool _hasPromptedBiometrics = false;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
+      if (mounted && !_hasPromptedBiometrics) {
+        _hasPromptedBiometrics = true;
         _checkBiometricsAndPrompt();
       }
     });
@@ -48,18 +49,8 @@ class _SessionLockScreenState extends ConsumerState<SessionLockScreen> with Widg
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
     _passwordController.dispose();
     super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && mounted) {
-      if (_isBiometricsAvailable && !_isAuthenticatingBiometrics) {
-        _authenticateWithBiometrics();
-      }
-    }
   }
 
   /// Détecte la biométrie et propose automatiquement l'authentification au lancement

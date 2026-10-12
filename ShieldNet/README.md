@@ -44,9 +44,9 @@ L'application intègre une politique de sécurité bancaire et de protection de 
 - **Seuil d'inactivité** : Dès que l'utilisateur quitte l'application pendant **plus de 5 minutes** (300 secondes), la session se verrouille automatiquement pour protéger les données confidentielles.
 - **Persistance** : L'état d'horodatage est conservé dans `SharedPreferences` pour survivre à la fermeture forcée de l'application par l'OS.
 
-### Déverrouillage biométrique prioritaire & Fallback mot de passe
-- **Biométrie native** : L'écran [SessionLockScreen](file:///c:/Projet/Projet%20synthese/ShieldNet/lib/core/widgets/session_lock_screen.dart) déclenche en priorité l'authentification par empreinte digitale ou Face ID via `local_auth`.
-- **Fallback mot de passe** : Si la biométrie est annulée, indisponible ou échoue, l'utilisateur peut déverrouiller son compte avec son mot de passe habituel.
+### Déverrouillage biométrique fluide (Prompt unique & sécurisé)
+- **Biométrie native sans doublon** : L'écran [SessionLockScreen](file:///c:/Projet/Projet%20synthese/ShieldNet/lib/core/widgets/session_lock_screen.dart) pilote l'authentification biométrique avec un verrou d'exécution strict afin de garantir l'ouverture d'une seule invite d'empreinte digitale ou Face ID au lancement.
+- **Fallback mot de passe** : Si la biométrie est annulée, indisponible ou échoue, l'utilisateur accède directement à l'écran de verrouillage avec saisie de mot de passe sécurisée et option de réinitialisation.
 
 ### Récupération de mot de passe par code OTP
 - **Feuille de récupération [ForgotPasswordSheet](file:///c:/Projet/Projet%20synthese/ShieldNet/lib/core/widgets/forgot_password_sheet.dart)** :
@@ -87,7 +87,7 @@ ShieldNet/
 │   ├── features/
 │   │   ├── call_filtering/                    # Dashboard, radar de protection, historique et signalements
 │   │   ├── onboarding/                        # Écrans de bienvenue et configuration initiale
-│   │   ├── settings/                          # Préférences, langue, mode Senior et console d'administration
+│   │   ├── settings/                          # Hub des paramètres, page Sécurité, Préférences, console admin
 │   │   └── sms_inspector/                     # Analyseur heuristique de SMS frauduleux
 │   │
 │   ├── l10n/                                  # Traductions bilingues ARB (français et anglais)

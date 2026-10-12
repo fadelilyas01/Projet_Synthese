@@ -26,8 +26,8 @@ class AuthGate extends ConsumerStatefulWidget {
 class _AuthGateState extends ConsumerState<AuthGate> with WidgetsBindingObserver {
   final BiometricService _biometricService = BiometricService();
   final SessionTimeoutService _sessionTimeout = SessionTimeoutService.instance;
-  bool _isBiometricUnlocked = true;
-  bool _isCheckingBiometrics = false;
+  bool _isSessionInitialized = false;
+  bool _isBiometricUnlocked = false;
 
   @override
   void initState() {
@@ -67,38 +67,15 @@ class _AuthGateState extends ConsumerState<AuthGate> with WidgetsBindingObserver
 
   Future<void> _initSessionAndBiometrics() async {
     await _sessionTimeout.initialize();
-    if (_sessionTimeout.isLocked) {
-      if (mounted) {
-        setState(() {
-          _isBiometricUnlocked = false;
-          _isCheckingBiometrics = false;
-        });
-      }
-      return;
-    }
-
     final enabled = await _biometricService.isBiometricEnabled();
-    if (!enabled) {
-      return;
-    }
-
-    // Si la protection biométrique est explicitement activée en paramètres
     if (mounted) {
       setState(() {
-        _isBiometricUnlocked = false;
-        _isCheckingBiometrics = true;
-      });
-    }
-
-    final authenticated = await _biometricService.authenticate(
-      reason: 'Authentifiez-vous par biométrie pour déverrouiller ShieldNet',
-      biometricOnly: true,
-    );
-
-    if (mounted) {
-      setState(() {
-        _isBiometricUnlocked = authenticated;
-        _isCheckingBiometrics = false;
+        if (_sessionTimeout.isLocked || enabled) {
+          _isBiometricUnlocked = false;
+        } else {
+          _isBiometricUnlocked = true;
+        }
+        _isSessionInitialized = true;
       });
     }
   }
@@ -112,8 +89,8 @@ class _AuthGateState extends ConsumerState<AuthGate> with WidgetsBindingObserver
       return const AuthLockPage();
     }
 
-    // 2. Si l'utilisateur est connecté mais que la vérification biométrique initiale est en cours
-    if (_isCheckingBiometrics) {
+    // 2. Attendre l'initialisation du statut de verrouillage pour éviter tout clignotement
+    if (!_isSessionInitialized) {
       return const Scaffold(
         body: Center(
           child: CircularProgressIndicator(),

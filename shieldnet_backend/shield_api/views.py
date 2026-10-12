@@ -1,9 +1,64 @@
+import json
+import logging
+import random
+import secrets
+import urllib.request
+
+from django.contrib.auth.models import User
+from django.core.cache import cache
+from django.db import models
+from django.db.models.signals import post_delete, post_save
+from django.dispatch import receiver
+from django.http import HttpResponse
+from django.utils import timezone
+from django.utils.dateparse import parse_datetime
+from drf_spectacular.utils import extend_schema
+from rest_framework import permissions, status
+from rest_framework.response import Response
+from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
+from rest_framework.views import APIView
+from rest_framework_simplejwt.tokens import RefreshToken
+
+from .ai_engine import ShieldNetAIEngine
+from .models import (
+    AuditLog,
+    AuditLogAction,
+    BlacklistedNumber,
+    SafeReport,
+    SpamReport,
+    UserProfile,
+)
+from .permissions import (
+    HasAPIKeyOrAuthenticated,
+    IsAdminOnlyUser,
+    IsAdminStaffUser,
+    IsManagerOrAdminUser,
+)
+from .serializers import (
+    AuditLogSerializer,
+    BatchCheckRequestSerializer,
+    BlacklistedNumberSerializer,
+    CheckNumberResponseSerializer,
+    EmailLoginSerializer,
+    GoogleLoginSerializer,
+    SafeReportCreateSerializer,
+    SpamReportCreateSerializer,
+    UserRegisterSerializer,
+    UserSerializer,
+)
+from .services import (
+    DatabaseSanitizerService,
+    FalsePositiveConsensusService,
+    ReputationService,
+    hash_phone_number,
+    mask_phone_number,
+)
+
+
 def verify_google_id_token(id_token):
     """Verifie cryptographiquement un jeton Google ID Token aupres de Google OAuth2."""
     if not id_token:
         return None
-    import urllib.request
-    import json
     url = f"https://oauth2.googleapis.com/tokeninfo?id_token={id_token}"
     try:
         req = urllib.request.Request(url, headers={'User-Agent': 'ShieldNet-Security/1.0'})
@@ -11,55 +66,6 @@ def verify_google_id_token(id_token):
             return json.loads(resp.read().decode('utf-8'))
     except Exception:
         return None
-
-from django.core.mail import send_mail
-from django.utils import timezone
-
-from django.db.models.signals import post_save, post_delete
-from django.dispatch import receiver
-from django.core.cache import cache
-from django.utils.dateparse import parse_datetime
-from .models import AuditLog, AuditLogAction
-from .serializers import AuditLogSerializer
-
-import secrets
-from django.db import models
-from django.contrib.auth.models import User
-from django.http import HttpResponse
-from rest_framework import generics, status, permissions
-from rest_framework.response import Response
-from rest_framework.views import APIView
-from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
-from rest_framework_simplejwt.tokens import RefreshToken
-from drf_spectacular.utils import extend_schema
-
-from .models import BlacklistedNumber, SpamReport, SafeReport, UserProfile, CountryChoices
-from .permissions import (
-    HasAPIKeyOrAuthenticated,
-    IsAdminStaffUser,
-    IsManagerOrAdminUser,
-    IsAdminOnlyUser,
-)
-from .serializers import (
-    BlacklistedNumberSerializer,
-    SpamReportCreateSerializer,
-    SafeReportCreateSerializer,
-    SafeReportSerializer,
-    CheckNumberResponseSerializer,
-    BatchCheckRequestSerializer,
-    UserSerializer,
-    UserRegisterSerializer,
-    EmailLoginSerializer,
-    GoogleLoginSerializer,
-    UpdateUserRegionSerializer,
-)
-from .services import (
-    ReputationService,
-    FalsePositiveConsensusService,
-    DatabaseSanitizerService,
-    hash_phone_number,
-    mask_phone_number,
-)
 
 class StrictReportSubmissionThrottle(AnonRateThrottle):
     """
@@ -152,7 +158,7 @@ class SubmitReportView(APIView):
             data = serializer.validated_data
             user = request.user if request.user.is_authenticated else None
             
-            report = ReputationService.process_new_report(
+            _ = ReputationService.process_new_report(
                 phone_hash=data['phone_hash'],
                 category=data['category'],
                 masked_number=data.get('masked_number'),
@@ -354,7 +360,6 @@ def send_welcome_confirmation_email(user, request=None):
         return
 
     import threading
-    import logging
     from django.conf import settings
     from django.core.mail import EmailMultiAlternatives
 
@@ -473,7 +478,6 @@ def send_password_changed_confirmation_email(user, request=None):
         return
 
     import threading
-    import logging
     from django.conf import settings
     from django.core.mail import EmailMultiAlternatives
 
@@ -1022,7 +1026,7 @@ class AdminBlacklistDetailView(APIView):
                 target_hash=phone_hash,
                 source=source
             )
-            return Response({'detail': f'Numéro supprimé de la liste noire.'})
+            return Response({'detail': 'Numéro supprimé de la liste noire.'})
         except BlacklistedNumber.DoesNotExist:
             return Response({'detail': 'Numéro introuvable.'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -1300,7 +1304,6 @@ class AdminAuditLogsListView(APIView):
 # ==============================================================================
 # MODULE D'ANALYSE SÉMANTIQUE & ARBITRAGE DES SIGNALEMENTS
 # ==============================================================================
-from .ai_engine import ShieldNetAIEngine
 
 class AIDiagnoseView(APIView):
     """
@@ -1532,7 +1535,6 @@ class HealthReadyView(APIView):
 
     def get(self, request):
         from django.db import connection
-        from django.core.cache import cache
         db_ok = False
         cache_ok = False
         errors = []
@@ -1563,8 +1565,6 @@ class HealthReadyView(APIView):
         }, status=status_code)
 
 
-import random
-from django.core.cache import cache
 
 class SendEmailOTPView(APIView):
     """
@@ -1690,8 +1690,7 @@ ShieldNet • Protection et confidentialite des communications • Montreal, QC,
             try:
                 from django.conf import settings
                 from django.core.mail import EmailMultiAlternatives
-                import logging
-
+            
                 raw_from = getattr(settings, 'DEFAULT_FROM_EMAIL', '') or 'ShieldNet <ilyf44118@gmail.com>'
                 if 'Security' in raw_from:
                     raw_from = raw_from.replace('ShieldNet Security', 'ShieldNet')
@@ -1707,8 +1706,7 @@ ShieldNet • Protection et confidentialite des communications • Montreal, QC,
                 msg.send(fail_silently=False)
                 logging.getLogger('shield_api').info(f"Code OTP delivre avec succes a {email}")
             except Exception as e:
-                import logging
-                logging.getLogger('shield_api').warning(f"Erreur envoi OTP a {email}: {e}")
+                            logging.getLogger('shield_api').warning(f"Erreur envoi OTP a {email}: {e}")
 
         import threading
         threading.Thread(target=_send_otp_async, daemon=True).start()
