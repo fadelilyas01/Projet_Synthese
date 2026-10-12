@@ -151,9 +151,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 ),
                 title: Row(
                   children: [
-                    Text(
-                      isEn ? 'Security & Protection' : 'Sécurité & Protection',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                    Flexible(
+                      child: Text(
+                        isEn ? 'Security & Protection' : 'Sécurité & Protection',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                     const SizedBox(width: 8),
                     Container(

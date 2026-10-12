@@ -1034,64 +1034,74 @@ class _HelpFaqPageState extends State<HelpFaqPage> {
                               ),
                               Divider(height: 1, color: borderColor),
                               const SizedBox(height: 10),
-                              // Widget interactif "Cette réponse vous a-t-elle aidé ?"
-                              Row(
-                                children: [
-                                  Text(
-                                    hasVoted
-                                        ? (isFr ? 'Merci pour votre retour ! 😊' : 'Thank you for your feedback! 😊')
-                                        : (isFr ? 'Cette réponse vous a-t-elle aidé ?' : 'Was this answer helpful?'),
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: hasVoted ? FontWeight.bold : FontWeight.normal,
-                                      color: hasVoted
-                                          ? (isDark ? Colors.greenAccent : Colors.green[700])
-                                          : (isDark ? Colors.grey[400] : Colors.grey[600]),
-                                    ),
-                                  ),
-                                  const Spacer(),
-                                  if (!hasVoted) ...[
-                                    InkWell(
-                                      onTap: () => setState(() => _feedbackGiven[faq.question] = true),
-                                      borderRadius: BorderRadius.circular(8),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        child: const Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Icon(Icons.thumb_up_alt_rounded, size: 14, color: AppTheme.primaryColor),
-                                            SizedBox(width: 4),
-                                            Text('Oui', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
-                                          ],
-                                        ),
+                              // Widget interactif "Cette réponse vous a-t-elle aidé ?" (responsive sans overflow)
+                              SizedBox(
+                                width: double.infinity,
+                                child: Wrap(
+                                  alignment: WrapAlignment.spaceBetween,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: [
+                                    Text(
+                                      hasVoted
+                                          ? (isFr ? 'Merci pour votre retour ! 😊' : 'Thank you for your feedback! 😊')
+                                          : (isFr ? 'Cette réponse vous a-t-elle aidé ?' : 'Was this answer helpful?'),
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: hasVoted ? FontWeight.bold : FontWeight.normal,
+                                        color: hasVoted
+                                            ? (isDark ? Colors.greenAccent : Colors.green[700])
+                                            : (isDark ? Colors.grey[400] : Colors.grey[600]),
                                       ),
                                     ),
-                                    const SizedBox(width: 6),
-                                    InkWell(
-                                      onTap: () => setState(() => _feedbackGiven[faq.question] = false),
-                                      borderRadius: BorderRadius.circular(8),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Icon(Icons.thumb_down_alt_rounded, size: 14, color: Colors.grey[500]),
-                                            const SizedBox(width: 4),
-                                            Text('Non', style: TextStyle(fontSize: 11, color: Colors.grey[600], fontWeight: FontWeight.w600)),
-                                          ],
-                                        ),
+                                    if (!hasVoted)
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          InkWell(
+                                            onTap: () => setState(() => _feedbackGiven[faq.question] = true),
+                                            borderRadius: BorderRadius.circular(8),
+                                            child: Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                              decoration: BoxDecoration(
+                                                color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                                                borderRadius: BorderRadius.circular(8),
+                                              ),
+                                              child: const Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(Icons.thumb_up_alt_rounded, size: 14, color: AppTheme.primaryColor),
+                                                  SizedBox(width: 4),
+                                                  Text('Oui', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 6),
+                                          InkWell(
+                                            onTap: () => setState(() => _feedbackGiven[faq.question] = false),
+                                            borderRadius: BorderRadius.circular(8),
+                                            child: Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                              decoration: BoxDecoration(
+                                                color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                                                borderRadius: BorderRadius.circular(8),
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(Icons.thumb_down_alt_rounded, size: 14, color: Colors.grey[500]),
+                                                  const SizedBox(width: 4),
+                                                  Text('Non', style: TextStyle(fontSize: 11, color: Colors.grey[600], fontWeight: FontWeight.w600)),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                    ),
                                   ],
-                                ],
+                                ),
                               ),
                             ],
                           ),
@@ -1120,9 +1130,11 @@ class _HelpFaqPageState extends State<HelpFaqPage> {
                   children: [
                     const Icon(Icons.help_center_rounded, color: AppTheme.primaryColor, size: 20),
                     const SizedBox(width: 8),
-                    Text(
-                      isFr ? 'Vous avez une question spécifique ?' : 'Have a specific question?',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                    Expanded(
+                      child: Text(
+                        isFr ? 'Vous avez une question spécifique ?' : 'Have a specific question?',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                      ),
                     ),
                   ],
                 ),
