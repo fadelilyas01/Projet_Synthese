@@ -385,16 +385,73 @@ class BloomFilterAndThreatIntelligenceTests(TestCase):
 
     def test_regional_threat_intelligence_service_and_api(self):
         from shield_api.services import RegionalThreatIntelligenceService
-        report = RegionalThreatIntelligenceService.get_regional_threat_report()
-        self.assertIn('regions', report)
-        self.assertGreater(report['total_regions_tracked'], 0)
         
-        region_codes = [r['area_code'] for r in report['regions']]
-        self.assertIn('819', region_codes)
+        # Ajouter un numéro d'Ontario et un numéro de New York
+        BlacklistedNumber.objects.create(
+            phone_hash="toronto_" + "1" * 56,
+            masked_number="+1 416 *** **99",
+            category='telemarketing',
+            risk_score=75,
+            reports_count=12,
+            is_blocked=True,
+            is_whitelisted=False
+        )
+        BlacklistedNumber.objects.create(
+            phone_hash="newyork_" + "2" * 56,
+            masked_number="+1 212 *** **88",
+            category='fraud',
+            risk_score=90,
+            reports_count=25,
+            is_blocked=True,
+            is_whitelisted=False
+        )
 
-        response = self.client.get('/api/v1/threats/regional/')
-        self.assertEqual(response.status_code, 200)
-        self.assertIn('regions', response.data)
+        # 1. Sans filtre (toutes les régions)
+        report_all = RegionalThreatIntelligenceService.get_regional_threat_report()
+        self.assertIn('regions', report_all)
+        self.assertGreater(report_all['total_regions_tracked'], 0)
+        codes_all = [r['area_code'] for r in report_all['regions']]
+        self.assertIn('819', codes_all)
+        self.assertIn('416', codes_all)
+        self.assertIn('212', codes_all)
+
+        # 2. Avec filtre province='QC' : Uniquement les indicatifs et villes du Québec
+        report_qc = RegionalThreatIntelligenceService.get_regional_threat_report(province='QC')
+        codes_qc = [r['area_code'] for r in report_qc['regions']]
+        self.assertIn('819', codes_qc)
+        self.assertNotIn('416', codes_qc)
+        self.assertNotIn('212', codes_qc)
+        for r in report_qc['regions']:
+            self.assertTrue(
+                r['area_code'] in RegionalThreatIntelligenceService.QUEBEC_AREA_CODES
+                or '(QC)' in r['region_name']
+            )
+
+        # 3. Via API GET ?province=QC
+        response_qc = self.client.get('/api/v1/threats/regional/?province=QC')
+        self.assertEqual(response_qc.status_code, 200)
+        resp_codes = [r['area_code'] for r in response_qc.data['regions']]
+        self.assertIn('819', resp_codes)
+        self.assertNotIn('416', resp_codes)
+        self.assertNotIn('212', resp_codes)
+
+        # 4. Via API avec utilisateur authentifié du Québec
+        from django.contrib.auth.models import User
+        from rest_framework_simplejwt.tokens import RefreshToken
+        user_qc = User.objects.create_user('radar_user_qc', 'radar_qc@test.ca', 'pwd')
+        user_qc.profile.province_or_state = 'QC'
+        user_qc.profile.save()
+        token = str(RefreshToken.for_user(user_qc).access_token)
+        
+        from rest_framework.test import APIClient
+        qc_client = APIClient()
+        qc_client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+        res_auth_qc = qc_client.get('/api/v1/threats/regional/')
+        self.assertEqual(res_auth_qc.status_code, 200)
+        auth_codes = [r['area_code'] for r in res_auth_qc.data['regions']]
+        self.assertIn('819', auth_codes)
+        self.assertNotIn('416', auth_codes)
+        self.assertNotIn('212', auth_codes)
 
 
 class RegionalComplianceSystemTests(TestCase):

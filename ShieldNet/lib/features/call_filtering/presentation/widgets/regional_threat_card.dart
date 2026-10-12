@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/models/regional_threat.dart';
+import '../../../../core/providers/auth_provider.dart';
+import '../../../../core/services/regional_compliance_service.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../l10n/app_localizations.dart';
 
-/// Carte d'alerte et de veille sur les menaces téléphoniques régionales ciblées (Spoofing)
-class RegionalThreatCard extends StatelessWidget {
+/// Carte d'alerte et de veille sur les arnaques téléphoniques ciblées par région
+class RegionalThreatCard extends ConsumerWidget {
   final RegionalThreatSummary summary;
 
   const RegionalThreatCard({
@@ -37,7 +40,11 @@ class RegionalThreatCard extends StatelessWidget {
     return cat;
   }
 
-  void _showDetailsBottomSheet(BuildContext context) {
+  void _showDetailsBottomSheet(
+    BuildContext context,
+    RegionalThreatSummary effectiveSummary,
+    bool isQuebec,
+  ) {
     final l10n = AppLocalizations.of(context);
     final isEn = Localizations.localeOf(context).languageCode == 'en';
     showModalBottomSheet(
@@ -73,7 +80,9 @@ class RegionalThreatCard extends StatelessWidget {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      l10n?.regionalRadarTitle ?? (isEn ? 'Regional Scam Radar' : 'Radar Régional des Arnaques'),
+                      isQuebec
+                          ? (isEn ? 'Quebec Scam Radar' : 'Radar des arnaques au Québec')
+                          : (l10n?.regionalRadarTitle ?? (isEn ? 'Regional Scam Radar' : 'Radar Régional des Arnaques')),
                       style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                   ),
@@ -81,10 +90,14 @@ class RegionalThreatCard extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                l10n?.regionalRadarDesc ??
-                    (isEn
-                        ? 'Real-time analysis of targeted spoofing waves by North American area codes (Canada / US).'
-                        : 'Analyse en temps réel des vagues d\'usurpation d\'identité (Spoofing) ciblées par indicatif québécois et canadien.'),
+                isQuebec
+                    ? (isEn
+                        ? 'Live alerts for area codes and cities across Quebec (Montreal, Quebec City, Laval, Gatineau...).'
+                        : 'Surveillance en direct des faux numéros ciblant les villes et indicatifs du Québec (Montréal, Québec, Laval, Gatineau...).')
+                    : (l10n?.regionalRadarDesc ??
+                        (isEn
+                            ? 'Real-time alert monitoring by area codes.'
+                            : 'Surveillance en direct des vagues de faux numéros par indicatif.')),
                 style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
               ),
               const SizedBox(height: 16),
@@ -92,62 +105,76 @@ class RegionalThreatCard extends StatelessWidget {
                 constraints: BoxConstraints(
                   maxHeight: MediaQuery.of(context).size.height * 0.5,
                 ),
-                child: ListView.separated(
-                  shrinkWrap: true,
-                  itemCount: summary.regions.length,
-                  separatorBuilder: (context, index) => const Divider(height: 1),
-                  itemBuilder: (ctx, index) {
-                    final item = summary.regions[index];
-                    final isCritical = item.isCritical;
-                    final isHigh = item.isHigh;
-                    final badgeColor = isCritical
-                        ? AppTheme.accentRed
-                        : (isHigh ? AppTheme.accentOrange : AppTheme.accentGreen);
+                child: effectiveSummary.regions.isEmpty
+                    ? Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 24),
+                        child: Center(
+                          child: Text(
+                            isQuebec
+                                ? (isEn
+                                    ? 'No active scam waves detected in Quebec cities.'
+                                    : 'Aucune vague d\'arnaque active détectée dans les villes du Québec.')
+                                : (isEn ? 'No active alerts.' : 'Aucune alerte active.'),
+                            style: TextStyle(color: Colors.grey.shade600),
+                          ),
+                        ),
+                      )
+                    : ListView.separated(
+                        shrinkWrap: true,
+                        itemCount: effectiveSummary.regions.length,
+                        separatorBuilder: (context, index) => const Divider(height: 1),
+                        itemBuilder: (ctx, index) {
+                          final item = effectiveSummary.regions[index];
+                          final isCritical = item.isCritical;
+                          final isHigh = item.isHigh;
+                          final badgeColor = isCritical
+                              ? AppTheme.accentRed
+                              : (isHigh ? AppTheme.accentOrange : AppTheme.accentGreen);
 
-                    return ListTile(
-                      contentPadding: const EdgeInsets.symmetric(vertical: 4),
-                      leading: Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: badgeColor.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          item.areaCode,
-                          style: TextStyle(
-                            fontWeight: FontWeight.w900,
-                            color: badgeColor,
-                            fontSize: 16,
-                          ),
-                        ),
+                          return ListTile(
+                            contentPadding: const EdgeInsets.symmetric(vertical: 4),
+                            leading: Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: badgeColor.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                item.areaCode,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  color: badgeColor,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ),
+                            title: Text(
+                              item.regionName,
+                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                            ),
+                            subtitle: Text(
+                              '${item.totalSpams} ${l10n?.regionalReportsCount ?? (isEn ? "reports • Type:" : "signalements • Type :")} ${_formatCategory(item.topCategory, isEn)}',
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                            trailing: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: badgeColor.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: badgeColor, width: 1),
+                              ),
+                              child: Text(
+                                _formatAlertLevel(item.alertLevel, isEn),
+                                style: TextStyle(
+                                  color: badgeColor,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
                       ),
-                      title: Text(
-                        item.regionName,
-                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-                      ),
-                      subtitle: Text(
-                        '${item.totalSpams} ${l10n?.regionalReportsCount ?? (isEn ? "reports • Type:" : "signalements • Type :")} ${_formatCategory(item.topCategory, isEn)}',
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                      trailing: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: badgeColor.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: badgeColor, width: 1),
-                        ),
-                        child: Text(
-                          _formatAlertLevel(item.alertLevel, isEn),
-                          style: TextStyle(
-                            color: badgeColor,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 11,
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
               ),
               const SizedBox(height: 16),
               SizedBox(
@@ -171,9 +198,16 @@ class RegionalThreatCard extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final highest = summary.highestAlert;
+    final isEn = Localizations.localeOf(context).languageCode == 'en';
+    final user = ref.watch(authNotifierProvider);
+    final regionalState = ref.watch(regionalComplianceProvider);
+    final province = (user?.provinceOrState ?? regionalState.provinceOrState).trim().toUpperCase();
+    final isQuebec = province == 'QC';
+
+    final effectiveSummary = isQuebec ? summary.filterByQuebec() : summary.filterByProvince(province);
+    final highest = effectiveSummary.highestAlert;
     if (highest == null) return const SizedBox.shrink();
 
     final isCritical = highest.isCritical;
@@ -183,7 +217,7 @@ class RegionalThreatCard extends StatelessWidget {
         : (isHigh ? AppTheme.accentOrange : AppTheme.primaryColor);
 
     return InkWell(
-      onTap: () => _showDetailsBottomSheet(context),
+      onTap: () => _showDetailsBottomSheet(context, effectiveSummary, isQuebec),
       borderRadius: BorderRadius.circular(16),
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
@@ -217,7 +251,9 @@ class RegionalThreatCard extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          '${l10n?.regionalAlertPrefix ?? "Alerte Indicatif"} (${highest.areaCode})',
+                          isQuebec
+                              ? (isEn ? 'Quebec Alert • (${highest.areaCode})' : 'Alerte Québec • (${highest.areaCode})')
+                              : '${l10n?.regionalAlertPrefix ?? "Alerte Indicatif"} (${highest.areaCode})',
                           style: TextStyle(
                             color: alertColor,
                             fontWeight: FontWeight.w800,
@@ -234,7 +270,7 @@ class RegionalThreatCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
-                          highest.alertLevel,
+                          _formatAlertLevel(highest.alertLevel, isEn),
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 10,
@@ -246,7 +282,11 @@ class RegionalThreatCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    l10n?.regionalWaveDesc(highest.regionName) ?? 'Vague active d\'appels frauduleux ciblant la région : ${highest.regionName}.',
+                    isQuebec
+                        ? (isEn
+                            ? 'Active scam call wave targeting: ${highest.regionName}.'
+                            : 'Vague active d\'appels frauduleux ciblant : ${highest.regionName}.')
+                        : (l10n?.regionalWaveDesc(highest.regionName) ?? 'Vague active d\'appels frauduleux ciblant la région : ${highest.regionName}.'),
                     style: const TextStyle(fontSize: 12, height: 1.3),
                   ),
                 ],

@@ -54,7 +54,7 @@ class _LegalCompliancePageState extends ConsumerState<LegalCompliancePage> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        isEn ? 'Privacy-by-Design Telecom Shield' : 'Bouclier Télécom Privacy-by-Design',
+                        isEn ? 'Telecom Shield & Privacy Protection' : 'Bouclier Télécom & Vie Privée',
                         style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
                       ),
                     ),
@@ -112,10 +112,10 @@ class _LegalCompliancePageState extends ConsumerState<LegalCompliancePage> {
                 ? 'No address book or personal contact list is ever uploaded to our servers.'
                 : 'Aucun carnet d\'adresses ni liste de contacts n\'est jamais téléversé sur nos serveurs.',
             content: isEn
-                ? 'Unlike commercial caller-ID apps that harvest your contacts onto remote databases, ShieldNet conducts all contact checks 100% locally on your Android device via the internal ContentProvider.\n\n'
+                ? 'Unlike commercial caller-ID apps that harvest your contacts onto remote databases, ShieldNet conducts all contact checks 100% locally on your phone without sending any data over the internet.\n\n'
                   '• Your personal contacts stay strictly confined to your device chip.\n'
                   '• Zero identifiable metadata (names, phone numbers, call frequency) is sent to anyone.'
-                : 'Contrairement aux applications commerciales qui aspirent vos contacts sur leurs serveurs distants, ShieldNet effectue toutes ses vérifications de contacts 100% en local sur votre terminal Android via le ContentProvider interne.\n\n'
+                : 'Contrairement aux applications commerciales qui aspirent vos contacts sur leurs serveurs distants, ShieldNet effectue toutes ses vérifications de contacts 100% en local, directement dans la mémoire sécurisée de votre téléphone.\n\n'
                   '• Vos contacts personnels restent hermétiquement confinés à la puce de votre appareil.\n'
                   '• Aucune métadonnée nominative (nom, prénom, fréquence d\'appels) n\'est envoyée à qui que ce soit.',
           ),
@@ -158,7 +158,7 @@ class _LegalCompliancePageState extends ConsumerState<LegalCompliancePage> {
                   '• Automatic expiration: Call logs and reports are automatically purged from memory after 30 to 90 days.\n'
                   '• Instant account deletion: You can delete your account at any time from Settings. All your reports are immediately anonymized and personal data permanently erased.'
                 : 'Conformément à la Loi 25 du Québec :\n\n'
-                  '• Expiration automatique : Les signalements et logs d\'appels sont purgés de la mémoire sous 30 à 90 jours.\n'
+                  '• Expiration automatique : Les signalements et historiques d\'appels sont purgés de la mémoire sous 30 à 90 jours.\n'
                   '• Suppression instantanée de compte : L\'utilisateur peut à tout instant supprimer son compte depuis les Paramètres. Tous ses signalements sont immédiatement anonymisés et ses données nominatives irrémédiablement effacées.',
           ),
           const SizedBox(height: 16),

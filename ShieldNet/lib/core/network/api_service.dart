@@ -281,10 +281,15 @@ class ApiService {
   }
 
   /// Récupère l'état d'alerte et l'analyse des menaces téléphoniques régionales
-  Future<RegionalThreatSummary?> getRegionalThreats() async {
+  Future<RegionalThreatSummary?> getRegionalThreats({String? province}) async {
     try {
+      final queryParams = <String, dynamic>{};
+      if (province != null && province.trim().isNotEmpty) {
+        queryParams['province'] = province.trim();
+      }
       final response = await _dio.get(
         'threats/regional/',
+        queryParameters: queryParams.isNotEmpty ? queryParams : null,
         options: Options(
           sendTimeout: const Duration(seconds: 2),
           receiveTimeout: const Duration(seconds: 2),

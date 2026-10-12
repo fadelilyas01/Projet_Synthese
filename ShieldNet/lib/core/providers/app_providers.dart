@@ -11,6 +11,8 @@ import '../services/home_widget_sync_service.dart';
 import '../security/device_integrity_checker.dart';
 import '../security/bloom_filter_client.dart';
 import '../models/regional_threat.dart';
+import '../services/regional_compliance_service.dart';
+import 'auth_provider.dart';
 export 'auth_provider.dart';
 
 /// Notifier pour le mode de thème (Clair / Sombre / Système) avec persistance SharedPreferences
@@ -348,7 +350,18 @@ final homeWidgetDataProvider = FutureProvider.autoDispose<HomeWidgetData>((ref) 
 /// Provider pour les alertes et menaces téléphoniques régionales
 final regionalThreatsProvider = FutureProvider.autoDispose<RegionalThreatSummary?>((ref) async {
   final api = ref.watch(apiServiceProvider);
-  return await api.getRegionalThreats();
+  final user = ref.watch(authNotifierProvider);
+  final regionalState = ref.watch(regionalComplianceProvider);
+  final province = (user?.provinceOrState ?? regionalState.provinceOrState).trim().toUpperCase();
+
+  final summary = await api.getRegionalThreats(province: province);
+  if (summary == null) return null;
+
+  // Si l'utilisateur est de la province de Québec, afficher uniquement les alertes et indicatifs de celle-ci et de ses villes
+  if (province == 'QC') {
+    return summary.filterByQuebec();
+  }
+  return summary.filterByProvince(province);
 });
 
 /// Notifier pour le filtre de Bloom en mémoire vive (évaluation probabiliste O(1))

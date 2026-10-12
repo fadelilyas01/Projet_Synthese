@@ -46,7 +46,7 @@ class DeviceIntegrityBanner extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  l10n?.deviceIntegrityRooted ?? 'Sécurité Système : Appareil Rooté',
+                  l10n?.deviceIntegrityRooted ?? 'Sécurité : Appareil modifié',
                   style: const TextStyle(
                     color: AppTheme.accentRed,
                     fontWeight: FontWeight.w800,
@@ -56,7 +56,7 @@ class DeviceIntegrityBanner extends StatelessWidget {
                 const SizedBox(height: 3),
                 Text(
                   l10n?.deviceIntegrityDesc ??
-                      'Un accès super-utilisateur (su / Magisk) est présent. Les protections cryptographiques locales peuvent être vulnérables.',
+                      'Votre appareil a été modifié ou déverrouillé. Certaines protections du système Android peuvent être affaiblies.',
                   style: const TextStyle(fontSize: 12, height: 1.3),
                 ),
               ],

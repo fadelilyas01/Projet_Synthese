@@ -84,7 +84,7 @@ class _EmergencyWhitelistPageState extends ConsumerState<EmergencyWhitelistPage>
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            l10n?.addWhitelistTitle ?? 'Ajouter à la Liste Blanche',
+                            l10n?.addWhitelistTitle ?? 'Ajouter un contact autorisé',
                             style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -98,7 +98,7 @@ class _EmergencyWhitelistPageState extends ConsumerState<EmergencyWhitelistPage>
                     const SizedBox(height: 12),
                     Text(
                       l10n?.addWhitelistDesc ??
-                          'Ce numéro bénéficiera d\'une immunité totale. Il ne sera jamais bloqué ni filtré par ShieldNet.',
+                          'Ce numéro sera toujours autorisé. Il ne sera jamais bloqué ni filtré par ShieldNet.',
                       style: TextStyle(
                         fontSize: 13,
                         color: isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondaryLight,
@@ -202,12 +202,12 @@ class _EmergencyWhitelistPageState extends ConsumerState<EmergencyWhitelistPage>
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(l10n?.confirmRemoveTitle ?? (isEn ? 'Remove from Whitelist?' : 'Retirer de la Liste Blanche ?')),
+        title: Text(l10n?.confirmRemoveTitle ?? (isEn ? 'Remove from Allowed Contacts?' : 'Retirer des contacts autorisés ?')),
         content: Text(
           l10n?.confirmRemoveDesc ??
               (isEn
-                  ? 'Do you want to remove this contact from the emergency whitelist? It will be subject to normal spam filtering again.'
-                  : 'Voulez-vous retirer ce contact de la liste blanche d\'urgence ? Il sera à nouveau soumis aux filtres standards.'),
+                  ? 'Do you want to remove this contact from your allowed list? It will be subject to normal call filtering again.'
+                  : 'Voulez-vous retirer ce contact de vos numéros autorisés ? Il sera à nouveau soumis au filtrage standard.'),
         ),
         actions: [
           TextButton(
@@ -224,7 +224,7 @@ class _EmergencyWhitelistPageState extends ConsumerState<EmergencyWhitelistPage>
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(l10n?.removeSuccess ??
-                        (isEn ? 'Contact removed from whitelist.' : 'Contact retiré de la liste blanche.')),
+                        (isEn ? 'Contact removed from allowed list.' : 'Contact retiré des numéros autorisés.')),
                     behavior: SnackBarBehavior.floating,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     backgroundColor: AppTheme.accentOrange,

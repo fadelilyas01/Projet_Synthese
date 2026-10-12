@@ -227,7 +227,7 @@ class _HelpFaqPageState extends State<HelpFaqPage> {
           category: 'Numéros importants & contestations',
           question: 'Un livreur ou ma clinique a été bloqué par erreur. Comment corriger ça ?',
           answer:
-              'Dans l\'application, ouvrez votre onglet « Activité » (Journal d\'appels), sélectionnez le numéro bloqué et cliquez sur « Contester ce blocage » (Avis Sûr).\n\nNotre algorithme de consensus prend immédiatement en compte votre avis. Dès que plusieurs utilisateurs confirment la légitimité d\'un numéro, celui-ci est retiré de la liste noire générale en moins de 10 minutes.',
+              'Dans l\'application, ouvrez votre onglet « Activité » (Journal d\'appels), sélectionnez le numéro bloqué et touchez « Débloquer pour moi » ou « Signaler comme sûr ».\n\nVotre avis est immédiatement pris en compte. Dès que plusieurs personnes confirment qu\'un numéro est sain, celui-ci est retiré de la liste des indésirables en quelques minutes.',
         ),
 
         // ── Catégorie 4 : Autorisations système Android
@@ -300,7 +300,7 @@ class _HelpFaqPageState extends State<HelpFaqPage> {
           category: 'Important Numbers & Disputes',
           question: 'A delivery driver or clinic was blocked by mistake. How do I fix it?',
           answer:
-              'In the ShieldNet app, navigate to your "Activity" tab (Call Log), select the blocked number, and tap "Contest this block" (Safe Review).\n\nOur community consensus engine immediately accounts for your feedback. As soon as multiple users confirm the number is legitimate, it is automatically unblocked for everyone in under 10 minutes.',
+              'In the ShieldNet app, navigate to your "Activity" tab (Call Log), select the blocked number, and tap "Unblock for me" or "Mark Safe for Community".\n\nYour feedback is processed immediately. As soon as multiple users confirm the number is legitimate, it is automatically unblocked for everyone in just a few minutes.',
         ),
 
         // ── Category 4: Android System Permissions
@@ -576,10 +576,10 @@ class _HelpFaqPageState extends State<HelpFaqPage> {
                 ),
                 _buildLegalSection(
                   isDark,
-                  isFr ? '2. Hachage cryptographique local' : '2. Local Cryptographic Hashing',
+                  isFr ? '2. Empreinte anonyme protégée' : '2. Anonymous Protected Fingerprint',
                   isFr
-                      ? 'Lors de la vérification, votre appareil calcule un hash SHA-256 irréversible. Seul ce code anonymisé transite pour alimenter la protection.'
-                      : 'During checks, an irreversible SHA-256 hash is generated locally. Only this anonymized hash transits for consensus.',
+                      ? 'Lors de la vérification, votre appareil crée une empreinte numérique codée et irréversible. Vos numéros réels et vos contacts ne sont jamais dévoilés.'
+                      : 'During checks, a secure anonymized code is generated locally. Your actual phone numbers and personal contacts are never exposed.',
                 ),
                 _buildLegalSection(
                   isDark,
@@ -667,10 +667,10 @@ class _HelpFaqPageState extends State<HelpFaqPage> {
                 ),
                 _buildLegalSection(
                   isDark,
-                  isFr ? '3. Consensus communautaire' : '3. Community Consensus',
+                  isFr ? '3. Validation collective' : '3. Community Verification',
                   isFr
-                      ? 'Les signalements et contestations sont validés par consensus pour empêcher les abus ou faux blocages.'
-                      : 'Reports and disputes are evaluated using multi-source consensus to prevent malicious or accidental blocks.',
+                      ? 'Les signalements et contestations sont validés collectivement pour empêcher les abus ou faux blocages.'
+                      : 'Reports and reviews are verified collectively to prevent malicious or accidental blocks.',
                 ),
               ],
             ),

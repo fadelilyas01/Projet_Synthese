@@ -1341,14 +1341,22 @@ class BloomFilterDownloadView(APIView):
 
 class RegionalThreatsView(APIView):
     """
-    GET /api/v1/threats/regional/
-    Fournit un rapport de Threat Intelligence sur les vagues de spoofing ciblées par indicatif régional.
+    GET /api/v1/threats/regional/?province=QC
+    Fournit un rapport de surveillance des vagues de faux numéros ciblées par indicatif régional.
+    Si l'utilisateur est de la province de Québec (?province=QC ou profil), seules les alertes
+    des indicatifs et villes québécoises (514 Montréal, 450 Laval, 418 Québec, 819 Gatineau...)
+    sont retournées, en excluant formellement les autres provinces ou États.
     """
     permission_classes = [permissions.AllowAny]
 
     def get(self, request):
+        province = request.query_params.get('province')
+        if not province and request.user and request.user.is_authenticated:
+            profile = getattr(request.user, 'profile', None)
+            if profile and profile.province_or_state:
+                province = profile.province_or_state
         from .services import RegionalThreatIntelligenceService
-        report = RegionalThreatIntelligenceService.get_regional_threat_report()
+        report = RegionalThreatIntelligenceService.get_regional_threat_report(province=province)
         return Response(report, status=status.HTTP_200_OK)
 
 

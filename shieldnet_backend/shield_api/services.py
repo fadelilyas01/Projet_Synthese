@@ -478,14 +478,58 @@ class RegionalThreatIntelligenceService:
     """
     Détection et analyse des vagues d'attaques téléphoniques régionales (Spoofing ciblé par indicatif).
     """
-    REGION_NAMES = {
-        # Canada (Québec, Ontario, Ouest, Atlantique)
-        '819': 'Outaouais / Gatineau / Laurentides (QC)',
+    QUEBEC_AREA_CODES = {
         '514': 'Montréal Centre-Ville (QC)',
         '438': 'Grand Montréal & Rive-Sud (QC)',
-        '418': 'Capitale-Nationale & Est (QC)',
+        '263': 'Montréal Métropole (QC)',
         '450': 'Laval & Couronnes (QC)',
+        '579': 'Laval, Laurentides & Lanaudière (QC)',
+        '354': 'Montérégie & Couronne Sud (QC)',
+        '418': 'Capitale-Nationale & Est (QC)',
+        '581': 'Québec Métropole & Saguenay (QC)',
         '367': 'Québec / Est (QC)',
+        '819': 'Outaouais / Gatineau / Laurentides (QC)',
+        '873': 'Gatineau, Mauricie & Abitibi (QC)',
+        '468': 'Mauricie & Centre-du-Québec (QC)',
+    }
+
+    AREA_CODE_PROVINCE = {
+        '514': 'QC', '438': 'QC', '263': 'QC', '450': 'QC', '579': 'QC', '354': 'QC',
+        '418': 'QC', '581': 'QC', '367': 'QC', '819': 'QC', '873': 'QC', '468': 'QC',
+        '613': 'ON', '416': 'ON', '647': 'ON', '905': 'ON',
+        '604': 'BC', '778': 'BC',
+        '403': 'AB', '780': 'AB',
+        '204': 'MB',
+        '902': 'NS',
+        '212': 'NY', '718': 'NY', '917': 'NY',
+        '213': 'CA', '310': 'CA', '415': 'CA', '619': 'CA',
+        '312': 'IL', '773': 'IL',
+        '713': 'TX', '214': 'TX', '512': 'TX',
+        '305': 'FL', '407': 'FL',
+        '202': 'DC',
+        '206': 'WA',
+        '617': 'MA',
+        '404': 'GA',
+        '215': 'PA',
+        '602': 'AZ',
+    }
+
+    REGION_NAMES = {
+        # Canada (Québec)
+        '514': 'Montréal Centre-Ville (QC)',
+        '438': 'Grand Montréal & Rive-Sud (QC)',
+        '263': 'Montréal Métropole (QC)',
+        '450': 'Laval & Couronnes (QC)',
+        '579': 'Laval, Laurentides & Lanaudière (QC)',
+        '354': 'Montérégie & Couronne Sud (QC)',
+        '418': 'Capitale-Nationale & Est (QC)',
+        '581': 'Québec Métropole & Saguenay (QC)',
+        '367': 'Québec / Est (QC)',
+        '819': 'Outaouais / Gatineau / Laurentides (QC)',
+        '873': 'Gatineau, Mauricie & Abitibi (QC)',
+        '468': 'Mauricie & Centre-du-Québec (QC)',
+
+        # Canada (Ontario, Ouest, Atlantique)
         '613': 'Ottawa / Est Ontarien (ON)',
         '416': 'Toronto Centre (ON)',
         '647': 'Grand Toronto (ON)',
@@ -521,7 +565,7 @@ class RegionalThreatIntelligenceService:
     }
 
     @classmethod
-    def get_regional_threat_report(cls) -> dict:
+    def get_regional_threat_report(cls, province: str = None) -> dict:
         from .models import BlacklistedNumber
         
         numbers = BlacklistedNumber.objects.filter(is_blocked=True, is_whitelisted=False).exclude(masked_number__isnull=True)
@@ -546,9 +590,13 @@ class RegionalThreatIntelligenceService:
                 code = match.group(1) if match else 'AUTRE'
                 
             if code not in regional_stats:
+                province_code = cls.AREA_CODE_PROVINCE.get(
+                    code, 'QC' if '(QC)' in cls.REGION_NAMES.get(code, '') else ''
+                )
                 regional_stats[code] = {
                     'area_code': code,
                     'region_name': cls.REGION_NAMES.get(code, 'Région NANP (Canada / É-U)'),
+                    'province': province_code,
                     'total_spams': 0,
                     'top_category': num.category,
                     'categories': {},
@@ -576,11 +624,28 @@ class RegionalThreatIntelligenceService:
                 
             result_list.append(data)
             
+        if province:
+            prov_clean = str(province).strip().upper()
+            if prov_clean == 'QC':
+                result_list = [
+                    r for r in result_list
+                    if r.get('area_code') in cls.QUEBEC_AREA_CODES
+                    or r.get('province') == 'QC'
+                    or '(QC)' in r.get('region_name', '')
+                ]
+            else:
+                result_list = [
+                    r for r in result_list
+                    if r.get('province') == prov_clean
+                    or f"({prov_clean})" in r.get('region_name', '').upper()
+                ]
+
         result_list.sort(key=lambda x: x['total_spams'], reverse=True)
         
         return {
             'generated_at': timezone.now().isoformat(),
             'total_regions_tracked': len(result_list),
+            'province_filter': province.strip().upper() if province else None,
             'regions': result_list,
         }
 

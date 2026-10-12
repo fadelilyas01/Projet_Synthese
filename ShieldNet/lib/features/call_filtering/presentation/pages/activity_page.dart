@@ -375,7 +375,7 @@ class _ActivityPageState extends ConsumerState<ActivityPage> with SingleTickerPr
         if (spamCount > 0) {
           messenger.showSnackBar(
             SnackBar(
-              content: Text(l10n?.auditCompletedSpam(spamCount) ?? 'Audit terminé : $spamCount numéro(s) suspect(s) identifié(s) dans votre journal.'),
+              content: Text(l10n?.auditCompletedSpam(spamCount) ?? 'Vérification terminée : $spamCount numéro(s) suspect(s) identifié(s) dans vos appels.'),
               backgroundColor: AppTheme.accentRed,
               behavior: SnackBarBehavior.floating,
               duration: const Duration(seconds: 4),
@@ -384,7 +384,7 @@ class _ActivityPageState extends ConsumerState<ActivityPage> with SingleTickerPr
         } else {
           messenger.showSnackBar(
             SnackBar(
-              content: Text(l10n?.auditCompletedClean(numbersToAudit.length) ?? 'Audit terminé : Vos ${numbersToAudit.length} appels récents sont sains.'),
+              content: Text(l10n?.auditCompletedClean(numbersToAudit.length) ?? 'Vérification terminée : Vos ${numbersToAudit.length} appels récents sont sains.'),
               backgroundColor: AppTheme.accentGreen,
               behavior: SnackBarBehavior.floating,
               duration: const Duration(seconds: 4),
@@ -394,7 +394,7 @@ class _ActivityPageState extends ConsumerState<ActivityPage> with SingleTickerPr
       } else {
         messenger.showSnackBar(
           SnackBar(
-            content: Text(l10n?.auditNetworkError ?? 'Impossible d\'effectuer l\'audit réseau.'),
+            content: Text(l10n?.auditNetworkError ?? 'Impossible de vérifier les numéros pour l\'instant.'),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -486,7 +486,7 @@ class _ActivityPageState extends ConsumerState<ActivityPage> with SingleTickerPr
                       ),
                       icon: const Icon(Icons.lock_open_rounded, size: 18),
                       label: Text(
-                        l10n?.unblockActionBtn ?? (isEn ? 'Unblock this number' : 'Débloquer ce numéro'),
+                        isEn ? 'Unblock for me' : 'Débloquer pour moi',
                         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                       ),
                       onPressed: () async {
@@ -495,7 +495,7 @@ class _ActivityPageState extends ConsumerState<ActivityPage> with SingleTickerPr
                         await ref.read(blacklistControllerProvider.notifier).unblockNumber(item.phoneHash);
                         messenger.showSnackBar(
                           SnackBar(
-                            content: Text(l10n?.unblockSuccessToast ?? (isEn ? 'Number unblocked successfully.' : 'Numéro débloqué avec succès.')),
+                            content: Text(isEn ? 'Number unblocked for you.' : 'Numéro débloqué pour vous.'),
                             backgroundColor: AppTheme.accentGreen,
                             behavior: SnackBarBehavior.floating,
                           ),
@@ -510,7 +510,7 @@ class _ActivityPageState extends ConsumerState<ActivityPage> with SingleTickerPr
                       ),
                       icon: const Icon(Icons.verified_outlined, size: 18, color: AppTheme.primaryColor),
                       label: Text(
-                        l10n?.disputeBtnContest ?? (isEn ? 'Unblock (Legitimate)' : 'Débloquer (Numéro légitime)'),
+                        isEn ? 'Mark safe for community' : 'Signaler comme sûr pour tous',
                         style: const TextStyle(color: AppTheme.primaryColor, fontWeight: FontWeight.bold),
                       ),
                       onPressed: () {
