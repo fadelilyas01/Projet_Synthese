@@ -94,7 +94,13 @@ class _SmsInspectorPageState extends ConsumerState<SmsInspectorPage> {
           children: [
             const Icon(Icons.mark_email_read_rounded, color: AppTheme.accentCyan),
             const SizedBox(width: 8),
-            Text(l10n?.smsInspectorTitle ?? 'Inspecteur de SMS & Liens', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            Expanded(
+              child: Text(
+                l10n?.smsInspectorTitle ?? 'Inspecteur de SMS & Liens',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
         ),
         actions: [
@@ -363,10 +369,14 @@ class _SmsInspectorPageState extends ConsumerState<SmsInspectorPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  isEn ? 'DETECTED SUSPICIOUS LINKS' : 'LIENS SUSPECTS DÉTECTÉS',
-                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.grey, letterSpacing: 1.0),
+                Expanded(
+                  child: Text(
+                    isEn ? 'DETECTED SUSPICIOUS LINKS' : 'LIENS SUSPECTS DÉTECTÉS',
+                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.grey, letterSpacing: 1.0),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
+                const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
