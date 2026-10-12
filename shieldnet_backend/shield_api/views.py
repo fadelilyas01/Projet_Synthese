@@ -1760,14 +1760,15 @@ class VerifyEmailOTPView(APIView):
     throttle_classes = [SensitiveOtpThrottle]
 
     def post(self, request):
-        email = request.data.get('email', '').strip().lower()
-        code = request.data.get('code', '').strip()
+        email = str(request.data.get('email') or '').strip().lower()
+        code = str(request.data.get('code') or '').strip()
+        new_password = str(request.data.get('new_password') or '').strip()
 
         if not email or not code:
             return Response({'detail': 'Courriel et code requis.'}, status=status.HTTP_400_BAD_REQUEST)
 
         cached_code = cache.get(f'otp_{email}')
-        if not cached_code or cached_code != code:
+        if not cached_code or str(cached_code).strip() != code:
             return Response({'detail': 'Code de vérification incorrect ou expiré.'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Invalidation immédiate du code utilisé

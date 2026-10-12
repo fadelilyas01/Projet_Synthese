@@ -152,25 +152,6 @@ class _SessionLockScreenState extends ConsumerState<SessionLockScreen> with Widg
           _errorMessage = e.toString().replaceAll('Exception: ', '');
         });
       }
-    }
-  }
-
-  /// Ouvre la modale de réinitialisation de mot de passe oublié
-  void _openForgotPasswordSheet() {
-    ForgotPasswordSheet.show(
-      context,
-      initialEmail: widget.user.email,
-      onPasswordResetSuccess: () {
-        widget.onUnlocked();
-      },
-    );
-  }
-
-  /// Déconnexion complète pour changer de compte
-  Future<void> _handleLogout() async {
-    await SessionTimeoutService.instance.unlockSession();
-    await ref.read(authNotifierProvider.notifier).logout();
-  }
 
   @override
   Widget build(BuildContext context) {

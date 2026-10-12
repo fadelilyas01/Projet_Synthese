@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
@@ -45,7 +46,11 @@ class _ForgotPasswordSheetState extends ConsumerState<ForgotPasswordSheet> {
 
   bool _codeSent = false;
   bool _loading = false;
-  bool _obscurePassword = true;
+  bool _obscureNewPassword = true;
+  bool _obscureConfirmPassword = true;
+  int _resendCooldown = 0;
+  Timer? _cooldownTimer;
+
   String? _errorMessage;
   String? _successMessage;
 
@@ -59,11 +64,31 @@ class _ForgotPasswordSheetState extends ConsumerState<ForgotPasswordSheet> {
 
   @override
   void dispose() {
+    _cooldownTimer?.cancel();
     _emailController.dispose();
     _codeController.dispose();
     _newPasswordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
+  }
+
+  void _startCooldownTimer(int seconds) {
+    setState(() => _resendCooldown = seconds);
+    _cooldownTimer?.cancel();
+    _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      setState(() {
+        if (_resendCooldown > 1) {
+          _resendCooldown--;
+        } else {
+          _resendCooldown = 0;
+          timer.cancel();
+        }
+      });
+    });
   }
 
   /// Étape 1 : Envoi du code de vérification par email
@@ -96,6 +121,7 @@ class _ForgotPasswordSheetState extends ConsumerState<ForgotPasswordSheet> {
               ? msg
               : (isEn ? 'Verification code sent!' : 'Code de vérification envoyé à votre adresse.');
         });
+        _startCooldownTimer(30);
       }
     } catch (e) {
       if (mounted) {
@@ -118,8 +144,8 @@ class _ForgotPasswordSheetState extends ConsumerState<ForgotPasswordSheet> {
     if (code.isEmpty || code.length < 4) {
       setState(() {
         _errorMessage = isEn
-            ? 'Please enter the 6-digit code received.'
-            : 'Veuillez saisir le code à 6 chiffres reçu.';
+            ? 'Please enter the 6-digit code received by email.'
+            : 'Veuillez saisir le code à 6 chiffres reçu par courriel.';
       });
       return;
     }
@@ -128,7 +154,7 @@ class _ForgotPasswordSheetState extends ConsumerState<ForgotPasswordSheet> {
       setState(() {
         _errorMessage = isEn
             ? 'The password must be at least 6 characters long.'
-            : 'Le mot de passe doit comporter au moins 6 caractères.';
+            : 'Le nouveau mot de passe doit comporter au moins 6 caractères.';
       });
       return;
     }
@@ -169,7 +195,7 @@ class _ForgotPasswordSheetState extends ConsumerState<ForgotPasswordSheet> {
                 Expanded(
                   child: Text(
                     isEn
-                        ? 'New password saved! You are now reconnected.'
+                        ? 'New password saved! You are now connected.'
                         : 'Nouveau mot de passe enregistré ! Vous êtes reconnecté.',
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
@@ -245,8 +271,8 @@ class _ForgotPasswordSheetState extends ConsumerState<ForgotPasswordSheet> {
                       Text(
                         _codeSent
                             ? (isEn
-                                ? 'Enter the code received and choose your new password.'
-                                : 'Saisissez le code reçu et définissez votre nouveau mot de passe.')
+                                ? 'Enter the 6-digit code received and choose your new password.'
+                                : 'Saisissez le code à 6 chiffres reçu et votre nouveau mot de passe.')
                             : (isEn
                                 ? 'We will send a 6-digit verification code to your email.'
                                 : 'Nous allons vous envoyer un code de vérification à 6 chiffres par courriel.'),
@@ -313,26 +339,35 @@ class _ForgotPasswordSheetState extends ConsumerState<ForgotPasswordSheet> {
               const SizedBox(height: 14),
             ],
 
-            // Champ Email
-            TextField(
-              controller: _emailController,
-              enabled: !_codeSent || !_loading,
-              keyboardType: TextInputType.emailAddress,
-              decoration: InputDecoration(
-                labelText: isEn ? 'Email Address' : 'Adresse courriel',
-                prefixIcon: const Icon(Icons.mail_outline_rounded),
-              ),
-            ),
-            const SizedBox(height: 12),
-
+            // Étape 1 : Saisie de l'adresse courriel
             if (!_codeSent) ...[
-              // Bouton Envoi OTP
+              TextField(
+                controller: _emailController,
+                enabled: !_loading,
+                keyboardType: TextInputType.emailAddress,
+                autofocus: widget.initialEmail == null || widget.initialEmail!.isEmpty,
+                decoration: InputDecoration(
+                  labelText: isEn ? 'Email Address' : 'Adresse courriel',
+                  hintText: isEn ? 'name@example.com' : 'nom@exemple.com',
+                  prefixIcon: const Icon(Icons.mail_outline_rounded),
+                ),
+              ),
+              const SizedBox(height: 16),
+
               ElevatedButton.icon(
                 onPressed: _loading ? null : _handleSendOtp,
-                icon: const Icon(Icons.send_rounded, size: 18),
+                icon: _loading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Icon(Icons.send_rounded, size: 18),
                 label: Text(
-                  isEn ? 'Send Verification Code' : 'Envoyer le code de vérification',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  _loading
+                      ? (isEn ? 'Sending...' : 'Envoi en cours...')
+                      : (isEn ? 'Send Verification Code' : 'Envoyer le code de vérification'),
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.primaryColor,
@@ -342,13 +377,63 @@ class _ForgotPasswordSheetState extends ConsumerState<ForgotPasswordSheet> {
                 ),
               ),
             ] else ...[
-              // Étape 2 : Code OTP + Nouveau mot de passe
+              // Étape 2 : Récapitulatif email + saisie code + nouveau mot de passe
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.2)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.mark_email_read_rounded, color: AppTheme.primaryColor, size: 20),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            isEn ? 'Code sent to' : 'Code envoyé à',
+                            style: const TextStyle(fontSize: 11, color: Colors.grey),
+                          ),
+                          Text(
+                            _emailController.text.trim(),
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: _loading
+                          ? null
+                          : () {
+                              setState(() {
+                                _codeSent = false;
+                                _errorMessage = null;
+                                _successMessage = null;
+                              });
+                            },
+                      child: Text(
+                        isEn ? 'Change' : 'Modifier',
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
               TextField(
                 controller: _codeController,
                 keyboardType: TextInputType.number,
                 maxLength: 6,
+                autofocus: true,
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 4),
                 decoration: InputDecoration(
                   labelText: isEn ? '6-Digit Verification Code' : 'Code de vérification à 6 chiffres',
+                  hintText: '123456',
                   prefixIcon: const Icon(Icons.pin_outlined),
                   counterText: '',
                 ),
@@ -357,16 +442,17 @@ class _ForgotPasswordSheetState extends ConsumerState<ForgotPasswordSheet> {
 
               TextField(
                 controller: _newPasswordController,
-                obscureText: _obscurePassword,
+                obscureText: _obscureNewPassword,
                 decoration: InputDecoration(
                   labelText: isEn ? 'New Password' : 'Nouveau mot de passe',
+                  helperText: isEn ? 'At least 6 characters' : 'Au moins 6 caractères',
                   prefixIcon: const Icon(Icons.lock_outline_rounded),
                   suffixIcon: IconButton(
                     icon: Icon(
-                      _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                      _obscureNewPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
                       size: 20,
                     ),
-                    onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                    onPressed: () => setState(() => _obscureNewPassword = !_obscureNewPassword),
                   ),
                 ),
               ),
@@ -374,19 +460,34 @@ class _ForgotPasswordSheetState extends ConsumerState<ForgotPasswordSheet> {
 
               TextField(
                 controller: _confirmPasswordController,
-                obscureText: _obscurePassword,
+                obscureText: _obscureConfirmPassword,
                 decoration: InputDecoration(
                   labelText: isEn ? 'Confirm New Password' : 'Confirmer le nouveau mot de passe',
                   prefixIcon: const Icon(Icons.lock_reset_rounded),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscureConfirmPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                      size: 20,
+                    ),
+                    onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+                  ),
                 ),
               ),
               const SizedBox(height: 18),
 
               ElevatedButton.icon(
                 onPressed: _loading ? null : _handleResetPassword,
-                icon: const Icon(Icons.check_circle_outline_rounded, size: 20),
+                icon: _loading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Icon(Icons.check_circle_outline_rounded, size: 20),
                 label: Text(
-                  isEn ? 'Save Password & Reconnect' : 'Enregistrer et se reconnecter',
+                  _loading
+                      ? (isEn ? 'Saving...' : 'Enregistrement...')
+                      : (isEn ? 'Save Password & Reconnect' : 'Enregistrer le mot de passe'),
                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                 ),
                 style: ElevatedButton.styleFrom(
@@ -400,10 +501,12 @@ class _ForgotPasswordSheetState extends ConsumerState<ForgotPasswordSheet> {
 
               Center(
                 child: TextButton.icon(
-                  onPressed: _loading ? null : _handleSendOtp,
+                  onPressed: (_loading || _resendCooldown > 0) ? null : _handleSendOtp,
                   icon: const Icon(Icons.refresh_rounded, size: 16),
                   label: Text(
-                    isEn ? 'Resend code' : 'Renvoyer un nouveau code',
+                    _resendCooldown > 0
+                        ? (isEn ? 'Resend code (${_resendCooldown}s)' : 'Renvoyer le code (${_resendCooldown}s)')
+                        : (isEn ? 'Resend code' : 'Renvoyer un nouveau code'),
                     style: const TextStyle(fontSize: 13),
                   ),
                 ),
