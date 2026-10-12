@@ -143,6 +143,7 @@ class ApiService {
             riskScore: response.data['risk_score'] ?? 50,
             reportsCount: response.data['reports_count'] ?? 1,
             updatedAt: DateTime.now().toIso8601String(),
+            isUserReported: true,
           ),
         );
         return true;
@@ -282,7 +283,14 @@ class ApiService {
   /// Récupère l'état d'alerte et l'analyse des menaces téléphoniques régionales
   Future<RegionalThreatSummary?> getRegionalThreats() async {
     try {
-      final response = await _dio.get('threats/regional/');
+      final response = await _dio.get(
+        'threats/regional/',
+        options: Options(
+          sendTimeout: const Duration(seconds: 2),
+          receiveTimeout: const Duration(seconds: 2),
+          extra: {'_retryCount': 2},
+        ),
+      );
       if (response.statusCode == 200 && response.data is Map) {
         return RegionalThreatSummary.fromJson(Map<String, dynamic>.from(response.data as Map));
       }
@@ -296,7 +304,15 @@ class ApiService {
   /// Télécharge le filtre de Bloom compressé pour vérification ultra-rapide en mémoire vive
   Future<BloomFilterClient?> downloadBloomFilter({int sizeBits = 65536}) async {
     try {
-      final response = await _dio.get('sync/bloom/', queryParameters: {'size_bits': sizeBits});
+      final response = await _dio.get(
+        'sync/bloom/',
+        queryParameters: {'size_bits': sizeBits},
+        options: Options(
+          sendTimeout: const Duration(seconds: 2),
+          receiveTimeout: const Duration(seconds: 2),
+          extra: {'_retryCount': 2},
+        ),
+      );
       if (response.statusCode == 200 && response.data is Map) {
         final filter = BloomFilterClient.fromJson(Map<String, dynamic>.from(response.data as Map));
         BloomFilterClient.activeFilter = filter;

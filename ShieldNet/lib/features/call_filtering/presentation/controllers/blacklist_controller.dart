@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fpdart/fpdart.dart';
 import '../../../../core/error/failures.dart';
+import '../../../../core/database/database_helper.dart';
 import '../../domain/entities/blacklisted_entry.dart';
 import '../../domain/repositories/blacklist_repository.dart';
 import '../../domain/usecases/get_blacklist_usecase.dart';
@@ -105,6 +106,13 @@ class BlacklistNotifier extends StateNotifier<AsyncValue<List<BlacklistedEntry>>
       state = AsyncValue.data(entries.where((e) => e.phoneHash != phoneHash).toList());
     });
   }
+
+  /// Débloque un numéro manuellement bloqué par l'utilisateur (réactivité 0ms et persistance SQLite)
+  Future<bool> unblockNumber(String phoneHash) async {
+    removeEntryLocally(phoneHash);
+    final success = await DatabaseHelper.instance.unblockUserNumber(phoneHash);
+    return success;
+  }
 }
 
 final blacklistControllerProvider =
@@ -118,3 +126,8 @@ final blacklistControllerProvider =
 
 /// Alias idiomatique Riverpod
 final blacklistProvider = blacklistControllerProvider;
+
+/// Provider donnant le nombre de menaces publiques actives filtrées silencieusement en arrière-plan
+final publicThreatIntelCountProvider = FutureProvider<int>((ref) async {
+  return await DatabaseHelper.instance.getPublicThreatIntelCount();
+});

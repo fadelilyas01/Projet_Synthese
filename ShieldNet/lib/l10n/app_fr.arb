@@ -47,8 +47,8 @@
   "tabBlockedNumbers": "Numéros Bloqués",
   "noRecentCalls": "Aucun appel récent",
   "noRecentCallsDesc": "Les appels récents s'afficheront ici avec leur état de sécurité.",
-  "noBlockedNumbers": "Aucun numéro bloqué",
-  "noBlockedNumbersDesc": "Tous les numéros signalés ou bloqués par le filtre automatique apparaîtront ici.",
+  "noBlockedNumbers": "Aucun numéro bloqué manuellement",
+  "noBlockedNumbersDesc": "Les numéros que vous bloquez ou signalez apparaîtront ici. Le bouclier public ShieldNet filtre les arnaques connues en arrière-plan.",
   "noResultsFound": "Aucun résultat trouvé",
   "tryAnotherSearch": "Essayez avec un autre terme de recherche.",
   "searchBlockedPlaceholder": "Rechercher un numéro bloqué...",
@@ -296,5 +296,12 @@
   "faqCategoryFiltering": "Filtrage & Efficacité",
   "faqCategoryPrivacy": "Confidentialité & Données",
   "faqCategoryEmergency": "Numéros d'Urgence & Faux Positifs",
-  "faqCategoryPermissions": "Permissions Android"
+  "faqCategoryPermissions": "Permissions Android",
+  "publicThreatsBannerTitle": "Bouclier Public Actif",
+  "publicThreatsBannerDesc": "{count} arnaques et menaces publiques sont automatiquement neutralisées en arrière-plan sans encombrer vos blocages personnels.",
+  "unblockActionBtn": "Débloquer ce numéro",
+  "unblockSuccessToast": "Numéro débloqué avec succès.",
+  "blockManualBtn": "Bloquer un numéro",
+  "blockManualDialogTitle": "Bloquer un numéro indésirable",
+  "blockManualNumberHint": "Saisir un numéro (ex: 514-555-0199)"
 }

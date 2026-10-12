@@ -157,11 +157,11 @@ class AppLocalizationsEn extends AppLocalizations {
       'Recent calls will appear here with their security status.';
 
   @override
-  String get noBlockedNumbers => 'No blocked numbers';
+  String get noBlockedNumbers => 'No manually blocked numbers';
 
   @override
   String get noBlockedNumbersDesc =>
-      'All numbers reported or blocked by automatic filter will appear here.';
+      'Numbers you block or report will appear here. The ShieldNet public feed filters known scam threats silently in the background.';
 
   @override
   String get noResultsFound => 'No results found';
@@ -963,4 +963,27 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get faqCategoryPermissions => 'Android Permissions';
+
+  @override
+  String get publicThreatsBannerTitle => 'Threat Shield Active';
+
+  @override
+  String publicThreatsBannerDesc(Object count) {
+    return '$count public threats and scam numbers are automatically blocked in the background without cluttering your personal blocklist.';
+  }
+
+  @override
+  String get unblockActionBtn => 'Unblock this number';
+
+  @override
+  String get unblockSuccessToast => 'Number unblocked successfully.';
+
+  @override
+  String get blockManualBtn => 'Block a number';
+
+  @override
+  String get blockManualDialogTitle => 'Block an unwanted number';
+
+  @override
+  String get blockManualNumberHint => 'Enter a number (e.g. 514-555-0199)';
 }

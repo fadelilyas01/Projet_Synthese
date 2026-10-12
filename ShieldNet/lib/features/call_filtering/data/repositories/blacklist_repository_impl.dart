@@ -20,7 +20,7 @@ class BlacklistRepositoryImpl implements BlacklistRepository {
   @override
   Future<Either<Failure, List<BlacklistedEntry>>> getLocalBlacklist() async {
     try {
-      final rows = await localDatabase.getAllBlacklistedNumbers();
+      final rows = await localDatabase.getUserBlockedNumbers();
       final domainList = rows.map(_toDomain).toList();
       return Right(domainList);
     } catch (e) {
@@ -122,6 +122,7 @@ class BlacklistRepositoryImpl implements BlacklistRepository {
           riskScore: 70,
           reportsCount: 1,
           updatedAt: now,
+          isUserReported: true,
         ),
       );
 

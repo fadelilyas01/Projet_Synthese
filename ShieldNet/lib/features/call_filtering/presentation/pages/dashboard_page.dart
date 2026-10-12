@@ -40,8 +40,10 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _loadInterceptedMetrics();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _checkClipboard());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadInterceptedMetrics();
+      _checkClipboard();
+    });
   }
 
   @override
@@ -90,12 +92,15 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
       final status = await Permission.phone.status;
       if (!status.isGranted) return;
 
+      final entries = await CallLogHelper.getSafeEntries(limit: 50);
+      if (entries.isEmpty) return;
+
       final list = await DatabaseHelper.instance.getAllBlacklistedNumbers();
-      final entries = await CallLogHelper.getSafeEntries(limit: 100);
       final hashes = list.map((e) => e.phoneHash).toSet();
       int intercepted = 0;
       for (var entry in entries) {
-        if (entry.number != null && hashes.contains(CryptoUtils.hashPhoneNumber(entry.number!))) {
+        final num = entry.number;
+        if (num != null && num.isNotEmpty && hashes.contains(CryptoUtils.hashPhoneNumber(num))) {
           intercepted++;
         }
       }

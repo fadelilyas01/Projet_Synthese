@@ -64,13 +64,18 @@ class _ActivityPageState extends ConsumerState<ActivityPage> with SingleTickerPr
     super.dispose();
   }
 
-  Future<void> _loadCallHistory() async {
+  Future<void> _loadCallHistory({bool requestPermission = false}) async {
     setState(() => _isLoadingCalls = true);
     try {
       final status = await Permission.phone.status;
       if (!status.isGranted) {
-        final req = await Permission.phone.request();
-        if (!req.isGranted) {
+        if (requestPermission) {
+          final req = await Permission.phone.request();
+          if (!req.isGranted) {
+            if (mounted) setState(() => _isLoadingCalls = false);
+            return;
+          }
+        } else {
           if (mounted) setState(() => _isLoadingCalls = false);
           return;
         }
@@ -151,6 +156,133 @@ class _ActivityPageState extends ConsumerState<ActivityPage> with SingleTickerPr
                         : () async {
                             setModalState(() => isSubmitting = true);
                             final messenger = ScaffoldMessenger.of(context);
+                            final navigator = Navigator.of(ctx);
+                            final result = await ref.read(blacklistProvider.notifier).reportSpam(
+                              rawPhoneNumber: rawNumber,
+                              category: selectedCategory,
+                            );
+
+                            navigator.pop();
+                            result.fold(
+                              (failure) {
+                                messenger.showSnackBar(
+                                  SnackBar(content: Text(failure.message), backgroundColor: AppTheme.accentRed),
+                                );
+                              },
+                              (_) async {
+                                await CitizenImpactService.incrementReportsCount();
+                                ref.read(blacklistControllerProvider.notifier).loadBlacklist();
+                                messenger.showSnackBar(
+                                  SnackBar(
+                                    content: Text(l10n?.reportSuccessMessage ?? 'Numéro bloqué et signalé avec succès.'),
+                                    backgroundColor: AppTheme.accentGreen,
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.accentRed,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: isSubmitting
+                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        : Text(l10n?.btnBlockThisNumber ?? 'Bloquer ce numéro', style: const TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _showManualBlockModal(BuildContext context) {
+    String selectedCategory = 'fraud';
+    final numberController = TextEditingController();
+    bool isSubmitting = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) {
+          final l10n = AppLocalizations.of(context);
+          return Padding(
+            padding: EdgeInsets.only(
+              left: 24,
+              right: 24,
+              top: 24,
+              bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          l10n?.blockManualDialogTitle ?? 'Bloquer un numéro indésirable',
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      IconButton(icon: const Icon(Icons.close_rounded), onPressed: () => Navigator.pop(ctx)),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  TextField(
+                    controller: numberController,
+                    keyboardType: TextInputType.phone,
+                    autofocus: true,
+                    decoration: InputDecoration(
+                      hintText: l10n?.blockManualNumberHint ?? 'Saisir un numéro (ex: 514-555-0199)',
+                      prefixIcon: const Icon(Icons.phone_outlined, size: 20),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(l10n?.reportReason ?? 'Motif du signalement :', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _buildChoiceChip(l10n?.categoryScam ?? 'Arnaque', 'fraud', selectedCategory, (cat) => setModalState(() => selectedCategory = cat)),
+                      _buildChoiceChip(l10n?.categoryTelemarketing ?? 'Démarchage', 'telemarketing', selectedCategory, (cat) => setModalState(() => selectedCategory = cat)),
+                      _buildChoiceChip(l10n?.categoryPhishing ?? 'Phishing', 'phishing', selectedCategory, (cat) => setModalState(() => selectedCategory = cat)),
+                      _buildChoiceChip(l10n?.categoryRobocall ?? 'Automate / Silence', 'robocall', selectedCategory, (cat) => setModalState(() => selectedCategory = cat)),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: isSubmitting
+                        ? null
+                        : () async {
+                            final rawNumber = numberController.text.trim();
+                            final digitCount = rawNumber.replaceAll(RegExp(r'\D'), '').length;
+                            final messenger = ScaffoldMessenger.of(context);
+                            if (digitCount < 7) {
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Text(l10n?.reportInvalidPhone ?? 'Veuillez saisir un numéro de téléphone valide.'),
+                                  backgroundColor: AppTheme.accentRed,
+                                ),
+                              );
+                              return;
+                            }
+
+                            setModalState(() => isSubmitting = true);
                             final navigator = Navigator.of(ctx);
                             final result = await ref.read(blacklistProvider.notifier).reportSpam(
                               rawPhoneNumber: rawNumber,
@@ -340,24 +472,49 @@ class _ActivityPageState extends ConsumerState<ActivityPage> with SingleTickerPr
                   ),
                 ),
                 const SizedBox(height: 20),
-                Row(
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                        icon: const Icon(Icons.verified_outlined, size: 18, color: AppTheme.accentGreen),
-                        label: Text(
-                          l10n?.disputeBtnContest ?? 'Contester (Faux positif)',
-                          style: const TextStyle(color: AppTheme.accentGreen, fontWeight: FontWeight.bold),
-                        ),
-                        onPressed: () {
-                          Navigator.pop(ctx);
-                          _showContestModal(context, item);
-                        },
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.accentGreen,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
+                      icon: const Icon(Icons.lock_open_rounded, size: 18),
+                      label: Text(
+                        l10n?.unblockActionBtn ?? (isEn ? 'Unblock this number' : 'Débloquer ce numéro'),
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                      ),
+                      onPressed: () async {
+                        final messenger = ScaffoldMessenger.of(context);
+                        Navigator.pop(ctx);
+                        await ref.read(blacklistControllerProvider.notifier).unblockNumber(item.phoneHash);
+                        messenger.showSnackBar(
+                          SnackBar(
+                            content: Text(l10n?.unblockSuccessToast ?? (isEn ? 'Number unblocked successfully.' : 'Numéro débloqué avec succès.')),
+                            backgroundColor: AppTheme.accentGreen,
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      icon: const Icon(Icons.verified_outlined, size: 18, color: AppTheme.primaryColor),
+                      label: Text(
+                        l10n?.disputeBtnContest ?? 'Contester (Faux positif)',
+                        style: const TextStyle(color: AppTheme.primaryColor, fontWeight: FontWeight.bold),
+                      ),
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        _showContestModal(context, item);
+                      },
                     ),
                   ],
                 ),
@@ -717,7 +874,8 @@ class _ActivityPageState extends ConsumerState<ActivityPage> with SingleTickerPr
 
     return RefreshIndicator(
       onRefresh: () async {
-        await _loadCallHistory();
+        CallLogHelper.invalidateCache();
+        await _loadCallHistory(requestPermission: true);
         await ref.read(blacklistControllerProvider.notifier).loadBlacklist();
         ref.invalidate(citizenImpactProvider);
       },
@@ -851,6 +1009,8 @@ class _ActivityPageState extends ConsumerState<ActivityPage> with SingleTickerPr
 
   Widget _buildBlockedListTab(AsyncValue<List<BlacklistedEntry>> blacklistAsync, Color cardBg, Color borderColor, bool isDark, AppLocalizations? l10n) {
     final isEn = (l10n?.localeName == 'en') || (Localizations.localeOf(context).languageCode == 'en');
+    final publicThreatCount = ref.watch(publicThreatIntelCountProvider).value ?? 250;
+
     return blacklistAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (err, _) => Center(child: Text(isEn ? 'Error: $err' : 'Erreur: $err')),
@@ -861,19 +1021,106 @@ class _ActivityPageState extends ConsumerState<ActivityPage> with SingleTickerPr
               e.category.toLowerCase().contains(_searchFilter);
         }).toList();
 
+        // 1. Bannière d'information sur la protection active en arrière-plan
+        final bannerWidget = Container(
+          margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                AppTheme.primaryColor.withValues(alpha: 0.10),
+                AppTheme.accentGreen.withValues(alpha: 0.08),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: AppTheme.primaryColor.withValues(alpha: 0.2),
+            ),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.shield_outlined, color: AppTheme.primaryColor, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          l10n?.publicThreatsBannerTitle ?? (isEn ? 'Threat Shield Active' : 'Bouclier Public Actif'),
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                        ),
+                        const Spacer(),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppTheme.accentGreen.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            '$publicThreatCount ${isEn ? "threats" : "menaces"}',
+                            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.accentGreen),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      l10n?.publicThreatsBannerDesc(publicThreatCount) ??
+                          (isEn
+                              ? '$publicThreatCount public threats and scam numbers are automatically blocked in the background without cluttering your personal blocklist.'
+                              : '$publicThreatCount arnaques et menaces publiques sont automatiquement neutralisées en arrière-plan sans encombrer vos blocages personnels.'),
+                      style: const TextStyle(color: Colors.grey, fontSize: 11, height: 1.35),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+
         return Column(
           children: [
+            bannerWidget,
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
-              child: TextField(
-                onChanged: (val) => setState(() => _searchFilter = val.trim().toLowerCase()),
-                decoration: InputDecoration(
-                  hintText: l10n?.searchBlockedPlaceholder ?? 'Rechercher un numéro bloqué...',
-                  prefixIcon: const Icon(Icons.search_rounded, size: 20),
-                  isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                ),
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      onChanged: (val) => setState(() => _searchFilter = val.trim().toLowerCase()),
+                      decoration: InputDecoration(
+                        hintText: l10n?.searchBlockedPlaceholder ?? 'Rechercher un numéro bloqué...',
+                        prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton.filled(
+                    style: IconButton.styleFrom(
+                      backgroundColor: AppTheme.accentRed,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    icon: const Icon(Icons.add_rounded, size: 22),
+                    tooltip: l10n?.blockManualBtn ?? 'Bloquer un numéro',
+                    onPressed: () => _showManualBlockModal(context),
+                  ),
+                ],
               ),
             ),
             Expanded(
@@ -884,12 +1131,13 @@ class _ActivityPageState extends ConsumerState<ActivityPage> with SingleTickerPr
                   } catch (_) {}
                   ref.invalidate(bloomFilterProvider);
                   ref.invalidate(citizenImpactProvider);
+                  ref.invalidate(publicThreatIntelCountProvider);
                 },
                 child: filtered.isEmpty
                     ? ListView(
                         physics: const AlwaysScrollableScrollPhysics(),
                         children: [
-                          SizedBox(height: MediaQuery.of(context).size.height * 0.15),
+                          SizedBox(height: MediaQuery.of(context).size.height * 0.10),
                           Center(
                             child: Padding(
                               padding: const EdgeInsets.all(32.0),
@@ -907,18 +1155,35 @@ class _ActivityPageState extends ConsumerState<ActivityPage> with SingleTickerPr
                                   const SizedBox(height: 18),
                                   Text(
                                     _searchFilter.isEmpty
-                                        ? (l10n?.noBlockedNumbers ?? 'Aucun numéro bloqué')
+                                        ? (l10n?.noBlockedNumbers ?? 'Aucun numéro bloqué manuellement')
                                         : (l10n?.noResultsFound ?? 'Aucun résultat trouvé'),
                                     style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                                   ),
                                   const SizedBox(height: 6),
                                   Text(
                                     _searchFilter.isEmpty
-                                        ? (l10n?.noBlockedNumbersDesc ?? 'Tous les numéros signalés ou bloqués par le filtre automatique apparaîtront ici.')
+                                        ? (l10n?.noBlockedNumbersDesc ?? 'Les numéros que vous bloquez ou signalez apparaîtront ici. Le bouclier public ShieldNet filtre les arnaques connues en arrière-plan.')
                                         : (l10n?.tryAnotherSearch ?? 'Essayez avec un autre terme de recherche.'),
                                     textAlign: TextAlign.center,
                                     style: const TextStyle(color: Colors.grey, fontSize: 13, height: 1.4),
                                   ),
+                                  if (_searchFilter.isEmpty) ...[
+                                    const SizedBox(height: 20),
+                                    OutlinedButton.icon(
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: AppTheme.accentRed,
+                                        side: const BorderSide(color: AppTheme.accentRed),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
+                                      ),
+                                      icon: const Icon(Icons.shield_outlined, size: 18),
+                                      label: Text(
+                                        l10n?.blockManualBtn ?? 'Bloquer un numéro',
+                                        style: const TextStyle(fontWeight: FontWeight.bold),
+                                      ),
+                                      onPressed: () => _showManualBlockModal(context),
+                                    ),
+                                  ],
                                 ],
                               ),
                             ),
@@ -933,7 +1198,8 @@ class _ActivityPageState extends ConsumerState<ActivityPage> with SingleTickerPr
                         itemBuilder: (ctx, index) {
                           final item = filtered[index];
                           final catColor = _getCategoryColor(item.category);
-                          return Container(
+
+                          final tileWidget = Container(
                             decoration: BoxDecoration(
                               color: cardBg,
                               borderRadius: BorderRadius.circular(16),
@@ -971,18 +1237,77 @@ class _ActivityPageState extends ConsumerState<ActivityPage> with SingleTickerPr
                                   ),
                                 ],
                               ),
-                              trailing: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.accentRed.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  '${item.riskScore}% ${l10n?.riskWord ?? "risque"}',
-                                  style: const TextStyle(color: AppTheme.accentRed, fontWeight: FontWeight.bold, fontSize: 11),
-                                ),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.accentRed.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      '${item.riskScore}% ${l10n?.riskWord ?? "risque"}',
+                                      style: const TextStyle(color: AppTheme.accentRed, fontWeight: FontWeight.bold, fontSize: 11),
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.lock_open_rounded, size: 18, color: Colors.grey),
+                                    tooltip: l10n?.unblockActionBtn ?? (isEn ? 'Unblock' : 'Débloquer'),
+                                    onPressed: () async {
+                                      HapticFeedback.lightImpact();
+                                      final messenger = ScaffoldMessenger.of(context);
+                                      await ref.read(blacklistControllerProvider.notifier).unblockNumber(item.phoneHash);
+                                      messenger.showSnackBar(
+                                        SnackBar(
+                                          content: Text(l10n?.unblockSuccessToast ?? (isEn ? 'Number unblocked successfully.' : 'Numéro débloqué avec succès.')),
+                                          backgroundColor: AppTheme.accentGreen,
+                                          behavior: SnackBarBehavior.floating,
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ],
                               ),
                             ),
+                          );
+
+                          return Dismissible(
+                            key: ValueKey('blocked_${item.phoneHash}'),
+                            direction: DismissDirection.endToStart,
+                            background: Container(
+                              alignment: Alignment.centerRight,
+                              padding: const EdgeInsets.symmetric(horizontal: 20),
+                              decoration: BoxDecoration(
+                                color: AppTheme.accentGreen,
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.lock_open_rounded, color: Colors.white, size: 20),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    l10n?.unblockActionBtn ?? (isEn ? 'Unblock' : 'Débloquer'),
+                                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            confirmDismiss: (direction) async {
+                              HapticFeedback.mediumImpact();
+                              final messenger = ScaffoldMessenger.of(context);
+                              await ref.read(blacklistControllerProvider.notifier).unblockNumber(item.phoneHash);
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Text(l10n?.unblockSuccessToast ?? (isEn ? 'Number unblocked successfully.' : 'Numéro débloqué avec succès.')),
+                                  backgroundColor: AppTheme.accentGreen,
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                              return true;
+                            },
+                            child: tileWidget,
                           );
                         },
                       ),

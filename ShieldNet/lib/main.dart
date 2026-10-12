@@ -90,21 +90,24 @@ Future<void> _initBackgroundServices() async {
     AppLogger.log("[Main] Erreur DatabaseHelper init: $e");
   }
 
-  // 3. Worker de synchronisation en tâche de fond (WorkManager)
+  // 3. Temporisation : laisser le premier rendu UI et les interactions démarrer sans latence (< 50ms)
+  await Future.delayed(const Duration(seconds: 3));
+
+  // 4. Worker de synchronisation en tâche de fond (WorkManager)
   try {
     await BackgroundSyncService.instance.initialize();
   } catch (e) {
     AppLogger.log("[Main] BackgroundSync init exception: $e");
   }
 
-  // 4. Initialisation du gestionnaire de temporisation de session
+  // 5. Initialisation du gestionnaire de temporisation de session
   try {
     await SessionTimeoutService.instance.initialize();
   } catch (e) {
     AppLogger.log("[Main] Erreur init SessionTimeoutService: $e");
   }
 
-  // 5. Synchronisation discrète de la liste noire en arrière-plan
+  // 6. Synchronisation discrète de la liste noire en arrière-plan
   try {
     final enabled = await BackgroundSyncService.instance.isAutoSyncEnabled();
     if (enabled) {
@@ -178,12 +181,7 @@ class MainTabNavigationScreen extends ConsumerStatefulWidget {
 
 class _MainTabNavigationScreenState extends ConsumerState<MainTabNavigationScreen> {
   int _currentIndex = 0;
-
-  final List<Widget> _screens = const [
-    DashboardPage(),
-    ActivityPage(),
-    SettingsPage(),
-  ];
+  final Set<int> _loadedTabs = {0};
 
   @override
   Widget build(BuildContext context) {
@@ -197,12 +195,21 @@ class _MainTabNavigationScreenState extends ConsumerState<MainTabNavigationScree
     return Scaffold(
       body: IndexedStack(
         index: _currentIndex,
-        children: _screens,
+        children: [
+          _loadedTabs.contains(0) ? const DashboardPage() : const SizedBox.shrink(),
+          _loadedTabs.contains(1) ? const ActivityPage() : const SizedBox.shrink(),
+          _loadedTabs.contains(2) ? const SettingsPage() : const SizedBox.shrink(),
+        ],
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         indicatorColor: AppTheme.primaryColor.withValues(alpha: 0.15),
-        onDestinationSelected: (index) => setState(() => _currentIndex = index),
+        onDestinationSelected: (index) {
+          setState(() {
+            _currentIndex = index;
+            _loadedTabs.add(index);
+          });
+        },
         destinations: [
           NavigationDestination(
             icon: const Icon(Icons.shield_outlined),

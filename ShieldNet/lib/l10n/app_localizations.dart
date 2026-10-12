@@ -383,13 +383,13 @@ abstract class AppLocalizations {
   /// No description provided for @noBlockedNumbers.
   ///
   /// In fr, this message translates to:
-  /// **'Aucun numéro bloqué'**
+  /// **'Aucun numéro bloqué manuellement'**
   String get noBlockedNumbers;
 
   /// No description provided for @noBlockedNumbersDesc.
   ///
   /// In fr, this message translates to:
-  /// **'Tous les numéros signalés ou bloqués par le filtre automatique apparaîtront ici.'**
+  /// **'Les numéros que vous bloquez ou signalez apparaîtront ici. Le bouclier public ShieldNet filtre les arnaques connues en arrière-plan.'**
   String get noBlockedNumbersDesc;
 
   /// No description provided for @noResultsFound.
@@ -1879,6 +1879,48 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Permissions Android'**
   String get faqCategoryPermissions;
+
+  /// No description provided for @publicThreatsBannerTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Bouclier Public Actif'**
+  String get publicThreatsBannerTitle;
+
+  /// No description provided for @publicThreatsBannerDesc.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count} arnaques et menaces publiques sont automatiquement neutralisées en arrière-plan sans encombrer vos blocages personnels.'**
+  String publicThreatsBannerDesc(Object count);
+
+  /// No description provided for @unblockActionBtn.
+  ///
+  /// In fr, this message translates to:
+  /// **'Débloquer ce numéro'**
+  String get unblockActionBtn;
+
+  /// No description provided for @unblockSuccessToast.
+  ///
+  /// In fr, this message translates to:
+  /// **'Numéro débloqué avec succès.'**
+  String get unblockSuccessToast;
+
+  /// No description provided for @blockManualBtn.
+  ///
+  /// In fr, this message translates to:
+  /// **'Bloquer un numéro'**
+  String get blockManualBtn;
+
+  /// No description provided for @blockManualDialogTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Bloquer un numéro indésirable'**
+  String get blockManualDialogTitle;
+
+  /// No description provided for @blockManualNumberHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Saisir un numéro (ex: 514-555-0199)'**
+  String get blockManualNumberHint;
 }
 
 class _AppLocalizationsDelegate

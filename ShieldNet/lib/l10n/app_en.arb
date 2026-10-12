@@ -47,8 +47,8 @@
   "tabBlockedNumbers": "Blocked Numbers",
   "noRecentCalls": "No recent calls",
   "noRecentCallsDesc": "Recent calls will appear here with their security status.",
-  "noBlockedNumbers": "No blocked numbers",
-  "noBlockedNumbersDesc": "All numbers reported or blocked by automatic filter will appear here.",
+  "noBlockedNumbers": "No manually blocked numbers",
+  "noBlockedNumbersDesc": "Numbers you block or report will appear here. The ShieldNet public feed filters known scam threats silently in the background.",
   "noResultsFound": "No results found",
   "tryAnotherSearch": "Try another search term.",
   "searchBlockedPlaceholder": "Search blocked number...",
@@ -296,5 +296,12 @@
   "faqCategoryFiltering": "Filtering & Performance",
   "faqCategoryPrivacy": "Privacy & Data Protection",
   "faqCategoryEmergency": "Emergency Numbers & False Positives",
-  "faqCategoryPermissions": "Android Permissions"
+  "faqCategoryPermissions": "Android Permissions",
+  "publicThreatsBannerTitle": "Threat Shield Active",
+  "publicThreatsBannerDesc": "{count} public threats and scam numbers are automatically blocked in the background without cluttering your personal blocklist.",
+  "unblockActionBtn": "Unblock this number",
+  "unblockSuccessToast": "Number unblocked successfully.",
+  "blockManualBtn": "Block a number",
+  "blockManualDialogTitle": "Block an unwanted number",
+  "blockManualNumberHint": "Enter a number (e.g. 514-555-0199)"
 }

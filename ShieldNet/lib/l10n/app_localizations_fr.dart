@@ -161,11 +161,11 @@ class AppLocalizationsFr extends AppLocalizations {
       'Les appels récents s\'afficheront ici avec leur état de sécurité.';
 
   @override
-  String get noBlockedNumbers => 'Aucun numéro bloqué';
+  String get noBlockedNumbers => 'Aucun numéro bloqué manuellement';
 
   @override
   String get noBlockedNumbersDesc =>
-      'Tous les numéros signalés ou bloqués par le filtre automatique apparaîtront ici.';
+      'Les numéros que vous bloquez ou signalez apparaîtront ici. Le bouclier public ShieldNet filtre les arnaques connues en arrière-plan.';
 
   @override
   String get noResultsFound => 'Aucun résultat trouvé';
@@ -973,4 +973,27 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get faqCategoryPermissions => 'Permissions Android';
+
+  @override
+  String get publicThreatsBannerTitle => 'Bouclier Public Actif';
+
+  @override
+  String publicThreatsBannerDesc(Object count) {
+    return '$count arnaques et menaces publiques sont automatiquement neutralisées en arrière-plan sans encombrer vos blocages personnels.';
+  }
+
+  @override
+  String get unblockActionBtn => 'Débloquer ce numéro';
+
+  @override
+  String get unblockSuccessToast => 'Numéro débloqué avec succès.';
+
+  @override
+  String get blockManualBtn => 'Bloquer un numéro';
+
+  @override
+  String get blockManualDialogTitle => 'Bloquer un numéro indésirable';
+
+  @override
+  String get blockManualNumberHint => 'Saisir un numéro (ex: 514-555-0199)';
 }

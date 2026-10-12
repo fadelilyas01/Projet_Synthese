@@ -15,6 +15,7 @@ class BlacklistedNumber {
   final int riskScore; // 0 à 100
   final int reportsCount;
   final String updatedAt;
+  final bool isUserReported; // True si bloqué manuellement par l'utilisateur (distinct de la Threat Intel publique)
 
   BlacklistedNumber({
     required this.phoneHash,
@@ -23,6 +24,7 @@ class BlacklistedNumber {
     required this.riskScore,
     required this.reportsCount,
     required this.updatedAt,
+    this.isUserReported = false,
   });
 
   Map<String, dynamic> toMap() {
@@ -33,6 +35,7 @@ class BlacklistedNumber {
       'risk_score': riskScore,
       'reports_count': reportsCount,
       'updated_at': updatedAt,
+      'is_user_reported': isUserReported ? 1 : 0,
     };
   }
 
@@ -44,6 +47,7 @@ class BlacklistedNumber {
       riskScore: (map['risk_score'] as int?) ?? 0,
       reportsCount: (map['reports_count'] as int?) ?? 1,
       updatedAt: (map['updated_at'] as String?) ?? DateTime.now().toIso8601String(),
+      isUserReported: ((map['is_user_reported'] as int?) ?? 0) == 1,
     );
   }
 }
@@ -212,7 +216,7 @@ class DatabaseHelper {
 
     final db = await openDatabase(
       path,
-      version: 4,
+      version: 5,
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
@@ -231,12 +235,17 @@ class DatabaseHelper {
         category TEXT NOT NULL,
         risk_score INTEGER NOT NULL,
         reports_count INTEGER NOT NULL,
-        updated_at TEXT NOT NULL
+        updated_at TEXT NOT NULL,
+        is_user_reported INTEGER NOT NULL DEFAULT 0
       )
     ''');
 
     await db.execute('''
       CREATE INDEX idx_category ON blacklist(category)
+    ''');
+
+    await db.execute('''
+      CREATE INDEX idx_is_user_reported ON blacklist(is_user_reported)
     ''');
 
     await db.execute('''
@@ -317,6 +326,7 @@ class DatabaseHelper {
             'risk_score': item['risk_score'] ?? 90,
             'reports_count': item['reports_count'] ?? 10,
             'updated_at': item['updated_at'] ?? DateTime.now().toIso8601String(),
+            'is_user_reported': 0,
           },
           conflictAlgorithm: ConflictAlgorithm.ignore,
         );
@@ -404,14 +414,34 @@ class DatabaseHelper {
         AppLogger.log('[DatabaseHelper] Erreur migration V4 offline queue: $e');
       }
     }
+    if (oldVersion < 5) {
+      try {
+        await db.execute('ALTER TABLE blacklist ADD COLUMN is_user_reported INTEGER NOT NULL DEFAULT 0');
+        await db.execute('CREATE INDEX IF NOT EXISTS idx_is_user_reported ON blacklist(is_user_reported)');
+      } catch (e) {
+        AppLogger.log('[DatabaseHelper] Erreur migration V5 is_user_reported: $e');
+      }
+    }
   }
 
   /// Insère ou met à jour un numéro indésirable dans le cache
   Future<void> insertOrUpdateBlacklistedNumber(BlacklistedNumber number) async {
     final db = await instance.database;
+    final map = number.toMap();
+    if (!number.isUserReported) {
+      final existing = await db.query(
+        'blacklist',
+        columns: ['is_user_reported'],
+        where: 'phone_hash = ?',
+        whereArgs: [number.phoneHash],
+      );
+      if (existing.isNotEmpty && ((existing.first['is_user_reported'] as int?) ?? 0) == 1) {
+        map['is_user_reported'] = 1;
+      }
+    }
     await db.insert(
       'blacklist',
-      number.toMap(),
+      map,
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
     await checkpointWAL();
@@ -427,12 +457,20 @@ class DatabaseHelper {
     final whitelistedRows = await db.query('emergency_whitelist', columns: ['phone_hash']);
     final whitelistedHashes = whitelistedRows.map((r) => r['phone_hash'] as String).toSet();
 
+    // Préserver le statut bloqué par l'utilisateur si déjà signalé
+    final userRows = await db.query('blacklist', columns: ['phone_hash'], where: 'is_user_reported = 1');
+    final userReportedHashes = userRows.map((r) => r['phone_hash'] as String).toSet();
+
     final batch = db.batch();
     for (final number in numbers) {
       if (whitelistedHashes.contains(number.phoneHash)) continue;
+      final map = number.toMap();
+      if (userReportedHashes.contains(number.phoneHash)) {
+        map['is_user_reported'] = 1;
+      }
       batch.insert(
         'blacklist',
-        number.toMap(),
+        map,
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
     }
@@ -515,6 +553,45 @@ class DatabaseHelper {
     final db = await instance.database;
     final result = await db.query('blacklist', orderBy: 'risk_score DESC');
     return result.map((json) => BlacklistedNumber.fromMap(json)).toList();
+  }
+
+  /// Récupère uniquement les numéros bloqués manuellement par l'utilisateur (pour affichage dans l'onglet utilisateur)
+  Future<List<BlacklistedNumber>> getUserBlockedNumbers() async {
+    final db = await instance.database;
+    final result = await db.query(
+      'blacklist',
+      where: 'is_user_reported = 1',
+      orderBy: 'updated_at DESC',
+    );
+    return result.map((json) => BlacklistedNumber.fromMap(json)).toList();
+  }
+
+  /// Compte le nombre de menaces publiques actives en arrière-plan
+  Future<int> getPublicThreatIntelCount() async {
+    final db = await instance.database;
+    return Sqflite.firstIntValue(
+      await db.rawQuery('SELECT COUNT(*) FROM blacklist WHERE is_user_reported = 0'),
+    ) ?? 0;
+  }
+
+  /// Débloque un numéro que l'utilisateur avait personnellement bloqué
+  Future<bool> unblockUserNumber(String phoneHash) async {
+    final db = await instance.database;
+    final deleted = await db.delete('blacklist', where: 'phone_hash = ?', whereArgs: [phoneHash]);
+    // Inscrire également dans l'immunité locale pour empêcher tout re-blocage ultérieur par synchronisation
+    await db.insert(
+      'emergency_whitelist',
+      {
+        'phone_hash': phoneHash,
+        'raw_number': '***',
+        'label': 'Débloqué manuellement par l\'utilisateur',
+        'is_system_critical': 0,
+        'created_at': DateTime.now().toIso8601String(),
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+    await checkpointWAL();
+    return deleted > 0;
   }
 
   /// Vide l'intégralité du cache local
