@@ -14,11 +14,30 @@ object ShieldNetDatabaseHelper {
     private const val TAG = "ShieldNetDBHelper"
     const val DEFAULT_SALT = "dev-local-hash-salt-test-do-not-use-in-prod"
 
+    @Volatile
+    private var cachedSalt: String? = null
+
+    @Volatile
+    private var cachedDbFile: File? = null
+
+    /**
+     * Permet d'alimenter immédiatement le cache mémoire du sel.
+     */
+    fun setCachedSalt(salt: String) {
+        cachedSalt = salt
+    }
+
     /**
      * Recherche le fichier de base de données SQLite créé par Flutter/Sqflite
      * à travers tous les emplacements possibles sur Android.
+     * Utilise le cache en mémoire RAM après la première détection.
      */
     fun findDatabaseFile(context: Context): File? {
+        val existing = cachedDbFile
+        if (existing != null && existing.exists() && existing.canRead()) {
+            return existing
+        }
+
         val candidatePaths = listOf(
             File(context.getDir("flutter", Context.MODE_PRIVATE), "shieldnet_cache.db"),
             File(context.filesDir, "shieldnet_cache.db"),
@@ -30,6 +49,7 @@ object ShieldNetDatabaseHelper {
         for (candidate in candidatePaths) {
             if (candidate.exists() && candidate.canRead()) {
                 Log.d(TAG, "Base SQLite détectée avec succès: ${candidate.absolutePath}")
+                cachedDbFile = candidate
                 return candidate
             }
         }
@@ -39,10 +59,11 @@ object ShieldNetDatabaseHelper {
     }
 
     /**
-     * Récupère le sel cryptographique depuis EncryptedSharedPreferences
-     * ou retourne le sel par défaut du projet.
+     * Récupère le sel cryptographique depuis la RAM (<0.001ms) ou EncryptedSharedPreferences.
      */
     fun getCryptoSalt(context: Context): String {
+        cachedSalt?.let { return it }
+
         try {
             val masterKey = MasterKey.Builder(context)
                 .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
@@ -58,18 +79,23 @@ object ShieldNetDatabaseHelper {
 
             val salt = prefs.getString("crypto_salt", null)
             if (!salt.isNullOrEmpty()) {
+                cachedSalt = salt
                 return salt
             }
         } catch (e: Exception) {
             Log.w(TAG, "Lecture Keystore impossible: ${e.message}")
         }
         val isDebuggable = (context.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0
-        return if (isDebuggable) {
+        val fallback = if (isDebuggable) {
             DEFAULT_SALT
         } else {
             Log.e(TAG, "Sécurité: Sel absent du Keystore en environnement de production.")
             ""
         }
+        if (fallback.isNotEmpty()) {
+            cachedSalt = fallback
+        }
+        return fallback
     }
 
     /**

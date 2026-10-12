@@ -85,6 +85,7 @@ class MainActivity : FlutterFragmentActivity() {
             if (call.method == "setCryptoSalt") {
                 val salt = call.argument<String>("salt")
                 if (salt != null) {
+                    ShieldNetDatabaseHelper.setCachedSalt(salt)
                     Thread {
                         try {
                             val masterKey = MasterKey.Builder(applicationContext)

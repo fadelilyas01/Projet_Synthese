@@ -251,6 +251,11 @@ class CheckNumberView(APIView):
     @extend_schema(responses={200: CheckNumberResponseSerializer})
     def get(self, request, phone_hash):
         attestation = request.query_params.get('attestation', '').strip()[:1].upper()
+        cache_key = f"fast_check_{phone_hash}_{attestation}"
+        cached_res = cache.get(cache_key)
+        if cached_res is not None:
+            return Response(cached_res)
+
         try:
             number = BlacklistedNumber.objects.get(phone_hash=phone_hash)
             # Un numéro est considéré comme spam s'il est bloqué ET non blanchi
@@ -263,7 +268,7 @@ class CheckNumberView(APIView):
             elif attestation == 'C' and is_spam:
                 risk_score = min(100, risk_score + 10)
 
-            return Response({
+            res_data = {
                 'is_spam': is_spam,
                 'risk_score': risk_score,
                 'category': number.category,
@@ -272,9 +277,11 @@ class CheckNumberView(APIView):
                 'consensus_score': number.consensus_score,
                 'is_whitelisted': number.is_whitelisted,
                 'whitelist_reason': number.whitelist_reason,
-            })
+            }
+            cache.set(cache_key, res_data, timeout=60)
+            return Response(res_data)
         except BlacklistedNumber.DoesNotExist:
-            return Response({
+            res_data = {
                 'is_spam': False,
                 'risk_score': 0,
                 'category': None,
@@ -283,7 +290,9 @@ class CheckNumberView(APIView):
                 'consensus_score': 0.0,
                 'is_whitelisted': False,
                 'whitelist_reason': None,
-            })
+            }
+            cache.set(cache_key, res_data, timeout=60)
+            return Response(res_data)
 
 
 class BatchCheckNumberView(APIView):

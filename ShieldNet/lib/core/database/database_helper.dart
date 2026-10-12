@@ -1,5 +1,7 @@
 import 'package:shieldnet/core/utils/logger.dart';
 import 'dart:async';
+import 'dart:convert';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
@@ -208,12 +210,17 @@ class DatabaseHelper {
     final docsDir = await getApplicationDocumentsDirectory();
     final path = join(docsDir.path, filePath);
 
-    return await openDatabase(
+    final db = await openDatabase(
       path,
       version: 4,
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
+
+    // Amorçage automatique des numéros de Threat Intelligence pré-identifiés
+    await ensureThreatIntelSeeded(db);
+
+    return db;
   }
 
   Future<void> _createDB(Database db, int version) async {
@@ -279,6 +286,48 @@ class DatabaseHelper {
     ''');
 
     await _seedDefaultEmergencyNumbers(db);
+    await _seedPreloadedThreatIntel(db);
+  }
+
+  /// S'assure que les numéros de Threat Intelligence sont préchargés si la liste locale contient moins de 10 éléments
+  Future<void> ensureThreatIntelSeeded([Database? targetDb]) async {
+    try {
+      final db = targetDb ?? await database;
+      final count = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM blacklist')) ?? 0;
+      if (count < 10) {
+        await _seedPreloadedThreatIntel(db);
+      }
+    } catch (e) {
+      AppLogger.log('[DatabaseHelper] Erreur vérification amorçage Threat Intelligence: $e');
+    }
+  }
+
+  Future<int> _seedPreloadedThreatIntel(Database db) async {
+    try {
+      final jsonStr = await rootBundle.loadString('assets/data/preloaded_threat_intel.json');
+      final list = json.decode(jsonStr) as List<dynamic>;
+      final batch = db.batch();
+      for (final item in list) {
+        batch.insert(
+          'blacklist',
+          {
+            'phone_hash': item['phone_hash'],
+            'masked_number': item['masked_number'],
+            'category': item['category'] ?? 'fraud',
+            'risk_score': item['risk_score'] ?? 90,
+            'reports_count': item['reports_count'] ?? 10,
+            'updated_at': item['updated_at'] ?? DateTime.now().toIso8601String(),
+          },
+          conflictAlgorithm: ConflictAlgorithm.ignore,
+        );
+      }
+      await batch.commit(noResult: true);
+      AppLogger.log('[DatabaseHelper] ${list.length} numéros de Threat Intelligence préchargés avec succès dans SQLite.');
+      return list.length;
+    } catch (e) {
+      AppLogger.log('[DatabaseHelper] Note: Amorçage préchargé différé ou environnement de test: $e');
+      return 0;
+    }
   }
 
   Future<void> _seedDefaultEmergencyNumbers(Database db) async {
