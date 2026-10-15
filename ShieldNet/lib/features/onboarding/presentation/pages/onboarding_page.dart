@@ -771,45 +771,44 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                     border: Border.all(color: borderColor),
                   ),
                   child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: regionalState.provinceOrState,
-                      isExpanded: true,
-                      icon: const Icon(Icons.arrow_drop_down_rounded),
-                      items: regionalState.country == 'CA'
-                          ? (isEn ? RegionalComplianceManager.canadianProvincesEn : RegionalComplianceManager.canadianProvinces).entries.map((e) {
-                              return DropdownMenuItem<String>(
-                                value: e.key,
-                                child: Text(
-                                  e.value,
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: e.key == regionalState.provinceOrState ? FontWeight.bold : FontWeight.normal,
-                                    color: e.key == regionalState.provinceOrState ? AppTheme.primaryColor : null,
-                                  ),
+                    child: Builder(
+                      builder: (context) {
+                        final provMap = regionalState.country == 'CA'
+                            ? (isEn ? RegionalComplianceManager.canadianProvincesEn : RegionalComplianceManager.canadianProvinces)
+                            : (isEn ? RegionalComplianceManager.usStatesEn : RegionalComplianceManager.usStates);
+                        final selectedProv = provMap.containsKey(regionalState.provinceOrState)
+                            ? regionalState.provinceOrState
+                            : provMap.keys.first;
+                        return DropdownButton<String>(
+                          value: selectedProv,
+                          isExpanded: true,
+                          icon: const Icon(Icons.arrow_drop_down_rounded),
+                          items: provMap.entries.map((e) {
+                            final isSelected = e.key == selectedProv;
+                            return DropdownMenuItem<String>(
+                              value: e.key,
+                              child: Text(
+                                e.value,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                  color: isSelected
+                                      ? (regionalState.country == 'CA' ? AppTheme.primaryColor : AppTheme.accentOrange)
+                                      : null,
                                 ),
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (newProv) {
+                            if (newProv != null) {
+                              HapticFeedback.selectionClick();
+                              ref.read(regionalComplianceProvider.notifier).setRegion(
+                                country: regionalState.country,
+                                provinceOrState: newProv,
                               );
-                            }).toList()
-                          : (isEn ? RegionalComplianceManager.usStatesEn : RegionalComplianceManager.usStates).entries.map((e) {
-                              return DropdownMenuItem<String>(
-                                value: e.key,
-                                child: Text(
-                                  e.value,
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: e.key == regionalState.provinceOrState ? FontWeight.bold : FontWeight.normal,
-                                    color: e.key == regionalState.provinceOrState ? AppTheme.accentOrange : null,
-                                  ),
-                                ),
-                              );
-                            }).toList(),
-                      onChanged: (newProv) {
-                        if (newProv != null) {
-                          HapticFeedback.selectionClick();
-                          ref.read(regionalComplianceProvider.notifier).setRegion(
-                            country: regionalState.country,
-                            provinceOrState: newProv,
-                          );
-                        }
+                            }
+                          },
+                        );
                       },
                     ),
                   ),
