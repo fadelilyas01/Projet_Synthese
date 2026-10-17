@@ -7,6 +7,7 @@ import '../../../../l10n/app_localizations.dart';
 import '../../../../core/services/biometric_service.dart';
 import '../../../../core/services/night_shield_service.dart';
 import '../../../../core/widgets/change_password_sheet.dart';
+import '../widgets/auth_bottom_sheet.dart';
 import 'emergency_whitelist_page.dart';
 import '../../../sms_inspector/presentation/pages/sms_inspector_page.dart';
 
@@ -287,26 +288,32 @@ class _SecuritySettingsPageState extends ConsumerState<SecuritySettingsPage> {
                 ),
                 secondary: const Icon(Icons.fingerprint_rounded, color: AppTheme.accentOrange, size: 24),
               ),
-              if (user != null) ...[
-                const Divider(height: 1, indent: 56),
-                ListTile(
-                  leading: const Icon(Icons.lock_reset_rounded, color: AppTheme.primaryColor, size: 24),
-                  title: Text(
-                    isEn ? 'Change Password' : 'Modifier mon mot de passe',
-                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-                  ),
-                  subtitle: Text(
-                    isEn
-                        ? 'Update your password securely'
-                        : 'Mettez à jour votre mot de passe en toute sécurité',
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                  trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.grey),
-                  onTap: () {
-                    ChangePasswordSheet.show(context);
-                  },
+              const Divider(height: 1, indent: 56),
+              ListTile(
+                leading: const Icon(Icons.lock_reset_rounded, color: AppTheme.primaryColor, size: 24),
+                title: Text(
+                  isEn ? 'Change Password' : 'Modifier mon mot de passe',
+                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                 ),
-              ],
+                subtitle: Text(
+                  user != null
+                      ? (isEn
+                          ? 'Update your password securely'
+                          : 'Mettez à jour votre mot de passe en toute sécurité')
+                      : (isEn
+                          ? 'Sign in to update your password'
+                          : 'Connectez-vous pour modifier votre mot de passe'),
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.grey),
+                onTap: () {
+                  if (user != null) {
+                    ChangePasswordSheet.show(context);
+                  } else {
+                    AuthBottomSheet.show(context);
+                  }
+                },
+              ),
             ],
           ),
           const SizedBox(height: 20),

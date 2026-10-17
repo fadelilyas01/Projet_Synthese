@@ -6,6 +6,7 @@ import '../../../../core/services/auth_service.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../widgets/auth_bottom_sheet.dart';
+import '../../../../core/widgets/change_password_sheet.dart';
 import 'admin_console_page.dart';
 import '../../../../core/services/offline_sync_service.dart';
 import '../../../../core/services/regional_compliance_service.dart';
@@ -517,6 +518,25 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               },
               child: Text(l10n?.btnLogout ?? 'Déconnexion', style: const TextStyle(color: AppTheme.accentRed, fontSize: 12, fontWeight: FontWeight.bold)),
             ),
+          ),
+          const Divider(height: 1, indent: 56),
+          ListTile(
+            dense: true,
+            leading: const Icon(Icons.lock_reset_rounded, color: AppTheme.primaryColor, size: 22),
+            title: Text(
+              ref.watch(localeProvider).languageCode == 'en' ? 'Change Password' : 'Modifier mon mot de passe',
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+            ),
+            subtitle: Text(
+              ref.watch(localeProvider).languageCode == 'en'
+                  ? 'Update your password securely'
+                  : 'Mettre à jour votre mot de passe en toute sécurité',
+              style: const TextStyle(fontSize: 11, color: Colors.grey),
+            ),
+            trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: Colors.grey),
+            onTap: () {
+              ChangePasswordSheet.show(context);
+            },
           ),
         ],
       );
