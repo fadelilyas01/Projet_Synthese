@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/providers/app_providers.dart';
 import '../../../../core/services/sms_phishing_detector.dart';
 import '../../../../core/services/demo_mode_service.dart';
+import '../../../../core/services/regional_compliance_service.dart';
 import '../../../../core/services/observability_service.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../l10n/app_localizations.dart';
@@ -88,6 +89,13 @@ class _SmsInspectorPageState extends ConsumerState<SmsInspectorPage> {
     final cardBg = AppTheme.cardBg(isDark);
     final borderColor = AppTheme.borderColor(isDark);
 
+    final regionalState = ref.watch(regionalComplianceProvider);
+    final user = ref.watch(authNotifierProvider);
+    final country = (user?.country ?? regionalState.country).trim().toUpperCase();
+    final provinceOrState = (user?.provinceOrState ?? regionalState.provinceOrState).trim().toUpperCase();
+    final provinceName = regionalState.getLocalizedProvinceName(isEn ? 'en' : 'fr');
+    final countryFlag = regionalState.countryFlag;
+
     return Scaffold(
       appBar: AppBar(
         title: Row(
@@ -167,25 +175,34 @@ class _SmsInspectorPageState extends ConsumerState<SmsInspectorPage> {
               ],
             ),
           ),
-          // Échantillons de démonstration (Scénarios réels)
+          // Échantillons de démonstration (Scénarios réels calibrés selon la région sélectionnée)
           Row(
             children: [
               Expanded(
                 child: Text(
-                  isEn ? 'EXAMPLE FRAUDULENT SMS TEMPLATES' : 'EXEMPLES DE SMS FRAUDULEUX RÉELS',
-                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.grey, letterSpacing: 1.0),
+                  isEn
+                      ? 'REGIONAL SMS SCAM SAMPLES ($countryFlag $provinceName)'
+                      : 'EXEMPLES DE SMS FRAUDULEUX RÉELS ($countryFlag $provinceName)',
+                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.grey, letterSpacing: 0.8),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
               const SizedBox(width: 8),
-              const Icon(Icons.touch_app_rounded, size: 14, color: Colors.grey),
+              Tooltip(
+                message: isEn ? 'Calibrated for $provinceName' : 'Calibré pour $provinceName',
+                child: const Icon(Icons.location_on_rounded, size: 14, color: AppTheme.accentCyan),
+              ),
             ],
           ),
           const SizedBox(height: 8),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
-              children: DemoModeService.getDemoSmsSamples(isEn: isEn).map((sample) {
+              children: DemoModeService.getDemoSmsSamples(
+                isEn: isEn,
+                country: country,
+                provinceOrState: provinceOrState,
+              ).map((sample) {
                 final isDangerous = sample['risk'] == 'DANGEROUS';
                 return Padding(
                   padding: const EdgeInsets.only(right: 8),

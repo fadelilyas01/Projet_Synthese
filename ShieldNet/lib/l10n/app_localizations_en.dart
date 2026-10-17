@@ -525,7 +525,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get actionSmsInspector => 'SMS Inspector';
 
   @override
-  String get actionSmsInspectorSub => 'Phishing detection';
+  String get actionSmsInspectorSub => 'Scam SMS detection';
 
   @override
   String get nightShieldActiveBadge => 'Night Shield Active';
@@ -631,7 +631,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get regionalRadarDesc =>
-      'Real-time analysis of targeted spoofing waves by North American area codes (Canada / US).';
+      'Real-time analysis of fake numbers and scam waves targeting your area (Canada / US).';
 
   @override
   String get regionalAlertPrefix => 'Area Code Alert';
@@ -670,10 +670,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reportCatFinancialScam => 'Financial Scam';
 
   @override
-  String get reportCatPhishing => 'Phishing';
+  String get reportCatPhishing => 'Fake SMS / Phishing';
 
   @override
-  String get reportCatRobocall => 'Automated Call / Robocall';
+  String get reportCatRobocall => 'Automated Call (Bot)';
 
   @override
   String get reportCommentLabel => 'Comment (Optional)';
@@ -768,7 +768,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Enlarges text, increases contrast and simplifies dashboard';
 
   @override
-  String get sectionOfflineResilience => 'OFFLINE & RESILIENCE';
+  String get sectionOfflineResilience => 'OFFLINE OPERATION';
 
   @override
   String get settingOfflineQueue => 'Offline Queue';
@@ -788,7 +788,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get consoleModerationTitle => 'Management & Moderation Console';
 
   @override
-  String get appVersionFooter => 'ShieldNet v1.0.0 • Telecom Security';
+  String get appVersionFooter =>
+      'ShieldNet v1.0.0 • Line Security & Peace of Mind';
 
   @override
   String auditCompletedSpam(Object count) {

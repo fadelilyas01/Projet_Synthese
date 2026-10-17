@@ -81,7 +81,7 @@ class _LegalCompliancePageState extends ConsumerState<LegalCompliancePage> {
             children: [
               _buildJurisdictionBadge(
                 isEn ? '🇨🇦 Quebec Law 25' : '🇨🇦 Loi 25 du Québec',
-                isEn ? 's. 28.1 GDPR-equivalent' : 'art. 28.1 RGPD-équivalent',
+                isEn ? 'Strict data protection' : 'Protection stricte des données',
                 const Color(0xFF0284C7),
               ),
               _buildJurisdictionBadge(
@@ -90,13 +90,13 @@ class _LegalCompliancePageState extends ConsumerState<LegalCompliancePage> {
                 const Color(0xFF10B981),
               ),
               _buildJurisdictionBadge(
-                isEn ? '🇺🇸 TCPA & FCC' : '🇺🇸 TCPA & FCC',
-                isEn ? 'STIR/SHAKEN Validated' : 'STIR/SHAKEN Validé',
+                isEn ? '🇺🇸 Anti-Fraud' : '🇺🇸 Anti-Fraude',
+                isEn ? 'Anti-spoofing certified' : 'Anti-usurpation certifié',
                 const Color(0xFF8B5CF6),
               ),
               _buildJurisdictionBadge(
                 isEn ? '🔒 Zero Third-Party' : '🔒 Zéro Tiers',
-                isEn ? 'No analytics / ad SDKs' : 'Aucun SDK publicitaire',
+                isEn ? 'No ad trackers' : 'Aucun traceur publicitaire',
                 Colors.deepOrange,
               ),
             ],

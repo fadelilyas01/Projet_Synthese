@@ -20,12 +20,28 @@ class CitizenImpactCard extends StatelessWidget {
     final cardBg = AppTheme.cardBg(isDark);
     final borderColor = AppTheme.borderColor(isDark);
 
+    final isEn = (l10n?.localeName == 'en') || (Localizations.localeOf(context).languageCode == 'en');
+
     String localizeRank(String title) {
       if (title.contains('Niveau 1') || title.contains('Initial')) return l10n?.rankInitial ?? title;
-      if (title.contains('Sentinelle') || title.contains('Sentinel')) return l10n?.rankSentinel ?? title;
-      if (title.contains('Protecteur') || title.contains('Guardian')) return l10n?.rankGuardian ?? title;
+      if (title.contains('Sentinelle') || title.contains('Sentinel') || title.contains('Niveau 2')) return l10n?.rankSentinel ?? title;
+      if (title.contains('Protecteur') || title.contains('Guardian') || title.contains('Niveau 3')) return l10n?.rankGuardian ?? title;
       if (title.contains('Pilier') || title.contains('Pillar')) return l10n?.rankPillar ?? title;
       return title;
+    }
+
+    String localizeDescription(String id, String defaultDesc) {
+      if (!isEn) return defaultDesc;
+      switch (id) {
+        case 'vigie':
+          return 'Submitted their first report to enrich the shared threat database.';
+        case 'sentinelle':
+          return 'Shared at least 5 confirmed reports.';
+        case 'gardien':
+          return 'Over 10 validated reports confirmed by community consensus.';
+        default:
+          return defaultDesc;
+      }
     }
 
     return Container(
@@ -156,7 +172,7 @@ class CitizenImpactCard extends StatelessWidget {
               final badgeTitle = localizeRank(badge.title);
               return Expanded(
                 child: Tooltip(
-                  message: '$badgeTitle : ${badge.description}',
+                  message: '$badgeTitle : ${localizeDescription(badge.id, badge.description)}',
                   child: Container(
                     margin: const EdgeInsets.symmetric(horizontal: 3),
                     padding: const EdgeInsets.symmetric(vertical: 8),

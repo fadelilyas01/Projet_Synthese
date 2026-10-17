@@ -122,8 +122,8 @@ class _ReportPageState extends ConsumerState<ReportPage> {
                 DropdownMenuItem(value: 'fraud', child: Text(l10n?.reportCatFraud ?? 'Fraude / Arnaque')),
                 DropdownMenuItem(value: 'telemarketing', child: Text(l10n?.reportCatTelemarketing ?? 'Démarchage Commercial')),
                 DropdownMenuItem(value: 'financial_scam', child: Text(l10n?.reportCatFinancialScam ?? 'Arnaque Financière')),
-                DropdownMenuItem(value: 'phishing', child: Text(l10n?.reportCatPhishing ?? 'Hameçonnage / Phishing')),
-                DropdownMenuItem(value: 'robocall', child: Text(l10n?.reportCatRobocall ?? 'Appel Automatisé / Robocall')),
+                DropdownMenuItem(value: 'phishing', child: Text(l10n?.reportCatPhishing ?? 'Faux SMS / Hameçonnage')),
+                DropdownMenuItem(value: 'robocall', child: Text(l10n?.reportCatRobocall ?? 'Appel automatisé (robot)')),
               ],
               onChanged: (val) {
                 if (val != null) setState(() => _selectedCategory = val);

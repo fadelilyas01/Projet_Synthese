@@ -189,10 +189,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String get categoryTelemarketing => 'Démarchage';
 
   @override
-  String get categoryPhishing => 'Phishing';
+  String get categoryPhishing => 'Hameçonnage';
 
   @override
-  String get categoryRobocall => 'Automate / Silence';
+  String get categoryRobocall => 'Appel robot / silencieux';
 
   @override
   String get btnBlockThisNumber => 'Bloquer ce numéro';
@@ -530,7 +530,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get actionSmsInspector => 'Inspecteur SMS';
 
   @override
-  String get actionSmsInspectorSub => 'Détection phishing';
+  String get actionSmsInspectorSub => 'Détection de faux SMS';
 
   @override
   String get nightShieldActiveBadge => 'Bouclier Nocturne Actif';
@@ -637,7 +637,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get regionalRadarDesc =>
-      'Analyse en temps réel des vagues d\'usurpation d\'identité (Spoofing) ciblées par indicatif régional (Canada / États-Unis).';
+      'Analyse en temps réel des vagues de faux numéros ciblant votre région (Canada / États-Unis).';
 
   @override
   String get regionalAlertPrefix => 'Alerte Indicatif';
@@ -676,10 +676,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String get reportCatFinancialScam => 'Arnaque Financière';
 
   @override
-  String get reportCatPhishing => 'Hameçonnage / Phishing';
+  String get reportCatPhishing => 'Faux SMS / Hameçonnage';
 
   @override
-  String get reportCatRobocall => 'Appel Automatisé / Robocall';
+  String get reportCatRobocall => 'Appel automatisé (robot)';
 
   @override
   String get reportCommentLabel => 'Commentaire (Optionnel)';
@@ -775,7 +775,7 @@ class AppLocalizationsFr extends AppLocalizations {
       'Agrandit les textes, renforce les contrastes et simplifie l\'accueil';
 
   @override
-  String get sectionOfflineResilience => 'RÉSILIENCE & HORS-LIGNE';
+  String get sectionOfflineResilience => 'FONCTIONNEMENT HORS-LIGNE';
 
   @override
   String get settingOfflineQueue => 'File d\'attente hors-ligne';
@@ -796,7 +796,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get consoleModerationTitle => 'Console de Gestion & Modération';
 
   @override
-  String get appVersionFooter => 'ShieldNet v1.0.0 • Sécurité Télécom';
+  String get appVersionFooter =>
+      'ShieldNet v1.0.0 • Sérénité & Sécurité de votre ligne';
 
   @override
   String auditCompletedSpam(Object count) {

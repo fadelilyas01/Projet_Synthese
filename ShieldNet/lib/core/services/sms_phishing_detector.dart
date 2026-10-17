@@ -52,6 +52,11 @@ class SmsPhishingDetector {
     'rcmp-grc.gc.ca',
     'ramq.gouv.qc.ca',
     'saaq.gouv.qc.ca',
+    'ontario.ca',
+    'hydroone.com',
+    'gov.bc.ca',
+    'bchydro.com',
+    'alberta.ca',
     // États-Unis
     'usa.gov',
     'irs.gov',
@@ -60,6 +65,13 @@ class SmsPhishingDetector {
     'fcc.gov',
     'ftc.gov',
     'medicare.gov',
+    'dmv.ca.gov',
+    'pge.com',
+    'dmv.ny.gov',
+    'coned.com',
+    'texas.gov',
+    'myflorida.com',
+    'fpl.com',
   };
 
   /// Marques protégées soumises à la détection de typosquatting et d'usurpation de nom d'hôte
@@ -71,6 +83,18 @@ class SmsPhishingDetector {
     'canadapost',
     'revenuquebec',
     'servicecanada',
+    'saaq',
+    'serviceontario',
+    'icbc',
+    'fastrak',
+    'ezpass',
+    'sunpass',
+    'txtag',
+    'pge',
+    'coned',
+    'fpl',
+    'hydroone',
+    'bchydro',
     'usps',
     'irs',
     'chase',
@@ -105,8 +129,20 @@ class SmsPhishingDetector {
     'arc': 30,
     'cra': 30,
     'saaq': 35,
+    'saaqclic': 35,
     'ramq': 35,
     'service canada': 35,
+    'serviceontario': 35,
+    'icbc': 35,
+    '407 etr': 35,
+    'dmv': 35,
+    'fastrak': 35,
+    'ezpass': 35,
+    'e-zpass': 35,
+    'sunpass': 35,
+    'txtag': 35,
+    'peage': 30,
+    'toll': 30,
     'irs': 35,
     'internal revenue': 35,
     'social security': 35,
@@ -138,6 +174,7 @@ class SmsPhishingDetector {
     'accesd': 35,
     'rbc': 30,
     'td': 25,
+    'td canada trust': 35,
     'bmo': 25,
     'cibc': 25,
     'banque nationale': 30,
@@ -164,6 +201,10 @@ class SmsPhishingDetector {
     'action requise': 20,
     'cliquez ici': 20,
     'mettre a jour': 15,
+    'coupure': 25,
+    'disconnection': 25,
+    'interruption': 25,
+    'suspension': 25,
   };
 
   /// Normalise le texte pour la détection insensible aux accents et immunisée contre l'évasion unicode
@@ -216,17 +257,17 @@ class SmsPhishingDetector {
   /// Extrait l'hôte d'une URL brute
   static String? _extractHost(String rawUrl) {
     try {
-      var uriStr = rawUrl.trim();
+      var uriStr = rawUrl.trim().replaceAll(RegExp(r'[\.,;:!?\)]+$'), '');
       if (!uriStr.startsWith('http://') && !uriStr.startsWith('https://')) {
         uriStr = 'https://$uriStr';
       }
       // Regex extraction to preserve non-ASCII / homoglyph characters that Dart Uri.parse would reject
       final hostMatch = RegExp(r'^https?:\/\/([^\/\s:\?#]+)', caseSensitive: false).firstMatch(uriStr);
       if (hostMatch != null) {
-        return hostMatch.group(1)!.toLowerCase();
+        return hostMatch.group(1)!.toLowerCase().replaceAll(RegExp(r'\.+$'), '');
       }
       final uri = Uri.parse(uriStr);
-      return uri.host.toLowerCase();
+      return uri.host.toLowerCase().replaceAll(RegExp(r'\.+$'), '');
     } catch (_) {
       return null;
     }
@@ -301,7 +342,10 @@ class SmsPhishingDetector {
       caseSensitive: false,
     );
     final rawMatches = urlRegex.allMatches(message).map((m) => m.group(0)!).toList();
-    final urls = rawMatches.where((u) => u.contains('.')).toList();
+    final urls = rawMatches
+        .map((u) => u.replaceAll(RegExp(r'[\.,;:!?\)]+$'), ''))
+        .where((u) => u.contains('.'))
+        .toList();
 
     // 1. Classification transactionnelle 2FA/OTP (Protection contre les faux positifs)
     final isOtpPattern = RegExp(r'\b\d{4,8}\b').hasMatch(message) &&

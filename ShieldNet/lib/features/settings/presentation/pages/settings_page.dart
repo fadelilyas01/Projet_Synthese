@@ -12,7 +12,6 @@ import '../../../../core/services/regional_compliance_service.dart';
 import '../widgets/region_selection_sheet.dart';
 import 'faq_page.dart';
 import '../../../../core/widgets/app_logo.dart';
-import '../../../../core/widgets/change_password_sheet.dart';
 import '../../../../core/services/biometric_service.dart';
 import 'legal_compliance_page.dart';
 import 'security_settings_page.dart';
@@ -148,72 +147,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           _buildUserAccountCard(user, cardBg, borderColor, isDark, l10n),
           const SizedBox(height: 14),
 
-          // 2. Posture de Sécurité & Télémétrie d'Ingénierie
+          // 2. Hub Principal : Sécurité & Posture Bouclier (Interactif -> SecuritySettingsPage)
           _buildSecurityPostureBanner(isDark, borderColor, isEn, user),
-          const SizedBox(height: 18),
-
-          // 3. Hub Principal : Sécurité & Filtrage
-          _buildSectionHeader(l10n?.sectionSecurity ?? (isEn ? 'SECURITY' : 'SÉCURITÉ')),
-          _buildCard(
-            cardBg: cardBg,
-            borderColor: borderColor,
-            children: [
-              ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                leading: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: AppTheme.accentGreen.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(Icons.shield_rounded, color: AppTheme.accentGreen, size: 26),
-                ),
-                title: Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        isEn ? 'Security & Protection' : 'Sécurité & Protection',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: AppTheme.accentGreen.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        isEn ? 'Active' : 'Actif',
-                        style: const TextStyle(
-                          color: AppTheme.accentGreen,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 10,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                subtitle: Padding(
-                  padding: const EdgeInsets.only(top: 4.0),
-                  child: Text(
-                    isEn
-                        ? 'Call & SMS filtering, biometric lock, emergency contacts'
-                        : 'Filtrage d\'appels et SMS, empreinte digitale, numéros protégés',
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                ),
-                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.grey),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const SecuritySettingsPage()),
-                  );
-                },
-              ),
-            ],
-          ),
           const SizedBox(height: 18),
 
           // 3. Hub Préférences de l'application
@@ -583,45 +518,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               child: Text(l10n?.btnLogout ?? 'Déconnexion', style: const TextStyle(color: AppTheme.accentRed, fontSize: 12, fontWeight: FontWeight.bold)),
             ),
           ),
-          const Divider(height: 1, indent: 16, endIndent: 16),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            child: Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => ChangePasswordSheet.show(context),
-                    icon: const Icon(Icons.key_rounded, size: 16),
-                    label: Text(
-                      ref.watch(localeProvider).languageCode == 'en' ? 'Password' : 'Mot de passe',
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                      side: BorderSide(color: borderColor),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => RegionSelectionSheet.show(context),
-                    icon: const Icon(Icons.public_rounded, size: 16),
-                    label: Text(
-                      '${user.countryFlag} ${user.provinceOrState}',
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                      side: BorderSide(color: borderColor),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
         ],
       );
     }
@@ -702,104 +598,151 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             end: Alignment.bottomRight,
           );
 
-    return Container(
-      decoration: BoxDecoration(
-        gradient: bgGradient,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: statusColor.withValues(alpha: 0.35), width: 1.2),
-        boxShadow: [
-          BoxShadow(
-            color: statusColor.withValues(alpha: isDark ? 0.08 : 0.05),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const SecuritySettingsPage()),
+          );
+        },
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: bgGradient,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: statusColor.withValues(alpha: 0.35), width: 1.2),
+            boxShadow: [
+              BoxShadow(
+                color: statusColor.withValues(alpha: isDark ? 0.08 : 0.05),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-        ],
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(Icons.verified_rounded, color: statusColor, size: 22),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      statusTitle,
-                      style: TextStyle(
-                        color: statusColor,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.9,
-                      ),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: statusColor.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '$score% ${isEn ? 'Protected' : 'Protégé'}',
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(
-                width: 44,
-                height: 44,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    CircularProgressIndicator(
-                      value: score / 100.0,
-                      strokeWidth: 4,
-                      backgroundColor: Colors.grey.withValues(alpha: 0.2),
-                      valueColor: AlwaysStoppedAnimation<Color>(statusColor),
-                    ),
-                    Center(
-                      child: Text(
-                        '$score%',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: statusColor,
+                    child: Icon(Icons.verified_rounded, color: statusColor, size: 22),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          statusTitle,
+                          style: TextStyle(
+                            color: statusColor,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.9,
+                          ),
                         ),
-                      ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '$score% ${isEn ? 'Protected' : 'Protégé'}',
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                  SizedBox(
+                    width: 44,
+                    height: 44,
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        CircularProgressIndicator(
+                          value: score / 100.0,
+                          strokeWidth: 4,
+                          backgroundColor: Colors.grey.withValues(alpha: 0.2),
+                          valueColor: AlwaysStoppedAnimation<Color>(statusColor),
+                        ),
+                        Center(
+                          child: Text(
+                            '$score%',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: statusColor,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Text(
+                statusSubtitle,
+                style: const TextStyle(fontSize: 12, color: Colors.grey, height: 1.35),
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  _buildSecurityBadge(
+                    isEn ? 'Instant blocking (< 2ms)' : 'Blocage instantané (< 2ms)',
+                    Icons.bolt_rounded,
+                    AppTheme.accentGreen,
+                  ),
+                  _buildSecurityBadge(
+                    isEn ? 'Secure vault' : 'Coffre-fort sécurisé',
+                    Icons.lock_outline_rounded,
+                    AppTheme.primaryLightColor,
+                  ),
+                  _buildSecurityBadge(
+                    isEn ? '100% anonymous' : 'Numéros 100% masqués',
+                    Icons.visibility_off_outlined,
+                    AppTheme.accentCyan,
+                  ),
+                  _buildSecurityBadge(
+                    isEn ? 'Quebec Law 25' : 'Loi 25 (Vie privée)',
+                    Icons.gavel_rounded,
+                    AppTheme.accentOrange,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Divider(height: 1, color: borderColor),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Icon(Icons.shield_rounded, size: 16, color: statusColor),
+                  const SizedBox(width: 8),
+                  Text(
+                    isEn ? 'Configure Call, SMS & Identity Shields' : 'Gérer vos protections & filtrage d\'appels',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: statusColor,
+                    ),
+                  ),
+                  const Spacer(),
+                  Icon(Icons.arrow_forward_ios_rounded, size: 12, color: statusColor),
+                ],
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          Text(
-            statusSubtitle,
-            style: const TextStyle(fontSize: 12, color: Colors.grey, height: 1.35),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: [
-              _buildEngineeringBadge('Filtre Bloom < 2ms', Icons.bolt_rounded, AppTheme.accentGreen),
-              _buildEngineeringBadge('Keystore AES-256', Icons.lock_outline_rounded, AppTheme.primaryLightColor),
-              _buildEngineeringBadge('Zéro-Fuite SHA-256', Icons.visibility_off_outlined, AppTheme.accentCyan),
-              _buildEngineeringBadge('Loi 25 & PIPEDA', Icons.gavel_rounded, AppTheme.accentOrange),
-            ],
-          ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildEngineeringBadge(String label, IconData icon, Color color) {
+  Widget _buildSecurityBadge(String label, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(

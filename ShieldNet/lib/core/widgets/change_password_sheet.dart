@@ -315,7 +315,7 @@ class _ChangePasswordSheetState extends ConsumerState<ChangePasswordSheet> {
                           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                         ),
                         Text(
-                          isEn ? 'Hardware Keystore • NIST SP 800-63B' : 'Sécurité certifiée NIST SP 800-63B',
+                          isEn ? 'Secure & encrypted account' : 'Protection et chiffrement de votre compte',
                           style: const TextStyle(fontSize: 12, color: Colors.grey),
                         ),
                       ],
@@ -345,8 +345,8 @@ class _ChangePasswordSheetState extends ConsumerState<ChangePasswordSheet> {
                       Expanded(
                         child: Text(
                           isEn
-                              ? 'Password updated successfully! Tokens rotated.'
-                              : 'Mot de passe modifié avec succès ! Jetons renouvelés.',
+                              ? 'Password updated successfully! Your account is secure.'
+                              : 'Mot de passe modifié avec succès ! Votre compte est sécurisé.',
                           style: const TextStyle(
                             color: AppTheme.accentGreen,
                             fontWeight: FontWeight.bold,
@@ -436,38 +436,16 @@ class _ChangePasswordSheetState extends ConsumerState<ChangePasswordSheet> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      isEn ? 'Cryptographic Strength:' : 'Robustesse cryptographique :',
+                      isEn ? 'Password strength:' : 'Niveau de sécurité :',
                       style: const TextStyle(fontSize: 12, color: Colors.grey),
                     ),
-                    Row(
-                      children: [
-                        Text(
-                          isEn ? entropy.labelEn : entropy.labelFr,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: entropy.color,
-                          ),
-                        ),
-                        if (entropy.estimatedBits > 0) ...[
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                            decoration: BoxDecoration(
-                              color: entropy.color.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              '~${entropy.estimatedBits} bits',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                                color: entropy.color,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
+                    Text(
+                      isEn ? entropy.labelEn : entropy.labelFr,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: entropy.color,
+                      ),
                     ),
                   ],
                 ),
@@ -565,12 +543,12 @@ class _ChangePasswordSheetState extends ConsumerState<ChangePasswordSheet> {
               ),
               const SizedBox(height: 10),
 
-              // Note d'assurance cryptographique
+              // Note de sécurité
               Center(
                 child: Text(
                   isEn
-                      ? 'Protected by Argon2id & PBKDF2 with HMAC-SHA256'
-                      : 'Hachage renforcé PBKDF2 avec sel unique cryptographique',
+                      ? 'Protected by advanced industry-grade encryption'
+                      : 'Protection maximale et chiffrement haute sécurité',
                   style: const TextStyle(fontSize: 11, color: Colors.grey),
                   textAlign: TextAlign.center,
                 ),

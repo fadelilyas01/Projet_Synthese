@@ -297,8 +297,8 @@ class _SecuritySettingsPageState extends ConsumerState<SecuritySettingsPage> {
                   ),
                   subtitle: Text(
                     isEn
-                        ? 'Update credentials with live entropy validation'
-                        : 'Modification directe certifiée NIST SP 800-63B',
+                        ? 'Update your password securely'
+                        : 'Mettez à jour votre mot de passe en toute sécurité',
                     style: const TextStyle(fontSize: 12, color: Colors.grey),
                   ),
                   trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.grey),

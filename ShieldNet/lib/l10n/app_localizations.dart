@@ -437,13 +437,13 @@ abstract class AppLocalizations {
   /// No description provided for @categoryPhishing.
   ///
   /// In fr, this message translates to:
-  /// **'Phishing'**
+  /// **'Hameçonnage'**
   String get categoryPhishing;
 
   /// No description provided for @categoryRobocall.
   ///
   /// In fr, this message translates to:
-  /// **'Automate / Silence'**
+  /// **'Appel robot / silencieux'**
   String get categoryRobocall;
 
   /// No description provided for @btnBlockThisNumber.
@@ -1085,7 +1085,7 @@ abstract class AppLocalizations {
   /// No description provided for @actionSmsInspectorSub.
   ///
   /// In fr, this message translates to:
-  /// **'Détection phishing'**
+  /// **'Détection de faux SMS'**
   String get actionSmsInspectorSub;
 
   /// No description provided for @nightShieldActiveBadge.
@@ -1271,7 +1271,7 @@ abstract class AppLocalizations {
   /// No description provided for @regionalRadarDesc.
   ///
   /// In fr, this message translates to:
-  /// **'Analyse en temps réel des vagues d\'usurpation d\'identité (Spoofing) ciblées par indicatif régional (Canada / États-Unis).'**
+  /// **'Analyse en temps réel des vagues de faux numéros ciblant votre région (Canada / États-Unis).'**
   String get regionalRadarDesc;
 
   /// No description provided for @regionalAlertPrefix.
@@ -1343,13 +1343,13 @@ abstract class AppLocalizations {
   /// No description provided for @reportCatPhishing.
   ///
   /// In fr, this message translates to:
-  /// **'Hameçonnage / Phishing'**
+  /// **'Faux SMS / Hameçonnage'**
   String get reportCatPhishing;
 
   /// No description provided for @reportCatRobocall.
   ///
   /// In fr, this message translates to:
-  /// **'Appel Automatisé / Robocall'**
+  /// **'Appel automatisé (robot)'**
   String get reportCatRobocall;
 
   /// No description provided for @reportCommentLabel.
@@ -1523,7 +1523,7 @@ abstract class AppLocalizations {
   /// No description provided for @sectionOfflineResilience.
   ///
   /// In fr, this message translates to:
-  /// **'RÉSILIENCE & HORS-LIGNE'**
+  /// **'FONCTIONNEMENT HORS-LIGNE'**
   String get sectionOfflineResilience;
 
   /// No description provided for @settingOfflineQueue.
@@ -1559,7 +1559,7 @@ abstract class AppLocalizations {
   /// No description provided for @appVersionFooter.
   ///
   /// In fr, this message translates to:
-  /// **'ShieldNet v1.0.0 • Sécurité Télécom'**
+  /// **'ShieldNet v1.0.0 • Sérénité & Sécurité de votre ligne'**
   String get appVersionFooter;
 
   /// No description provided for @auditCompletedSpam.
