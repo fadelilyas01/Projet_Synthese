@@ -21,7 +21,7 @@ class ApiClient {
     }
     const fallbacks = [
       'http://127.0.0.1:8000/api/v1/',
-      'http://192.168.2.17:8000/api/v1/',
+      'http://localhost:8000/api/v1/',
       'http://10.0.2.2:8000/api/v1/',
     ];
     for (final fb in fallbacks) {
@@ -82,14 +82,16 @@ class ApiClient {
           final client = HttpClient();
           // Exiger TLS 1.2+ minimum
           client.badCertificateCallback = (X509Certificate cert, String host, int port) {
-            // Environnements de développement locaux autorisés
-            if (host == 'localhost' ||
-                host == '127.0.0.1' ||
-                host == '10.0.2.2' ||
-                host.startsWith('192.168.') ||
-                host.startsWith('10.') ||
-                host.startsWith('172.')) {
-              return true;
+            // Environnements de développement locaux autorisés STRICTEMENT en mode Debug (CWE-295)
+            if (kDebugMode) {
+              if (host == 'localhost' ||
+                  host == '127.0.0.1' ||
+                  host == '10.0.2.2' ||
+                  host.startsWith('192.168.') ||
+                  host.startsWith('10.') ||
+                  host.startsWith('172.')) {
+                return true;
+              }
             }
             // Vérification de l'empreinte SHA-256 configurée dans les variables d'environnement
             final pinnedSha256 = dotenv.env['SSL_PINNED_SHA256'];

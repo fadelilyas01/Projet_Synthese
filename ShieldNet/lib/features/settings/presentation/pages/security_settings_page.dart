@@ -6,7 +6,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../core/services/biometric_service.dart';
 import '../../../../core/services/night_shield_service.dart';
-import '../../../../core/widgets/forgot_password_sheet.dart';
+import '../../../../core/widgets/change_password_sheet.dart';
 import 'emergency_whitelist_page.dart';
 import '../../../sms_inspector/presentation/pages/sms_inspector_page.dart';
 
@@ -297,16 +297,13 @@ class _SecuritySettingsPageState extends ConsumerState<SecuritySettingsPage> {
                   ),
                   subtitle: Text(
                     isEn
-                        ? 'Receive a secure verification code by email'
-                        : 'Recevoir un code de sécurité par courriel',
+                        ? 'Update credentials with live entropy validation'
+                        : 'Modification directe certifiée NIST SP 800-63B',
                     style: const TextStyle(fontSize: 12, color: Colors.grey),
                   ),
                   trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.grey),
                   onTap: () {
-                    ForgotPasswordSheet.show(
-                      context,
-                      initialEmail: user.email,
-                    );
+                    ChangePasswordSheet.show(context);
                   },
                 ),
               ],

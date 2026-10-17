@@ -4,7 +4,7 @@ from django.urls import reverse
 from django.conf import settings
 from rest_framework import status
 from rest_framework.test import APITestCase, APIClient
-from shield_api.models import BlacklistedNumber, SpamReport, SafeReport
+from shield_api.models import BlacklistedNumber, SpamReport, SafeReport, AuditLog, AuditLogAction
 from shield_api.services import ReputationService, AutomatedSpamVerifier, FalsePositiveConsensusService
 class ShieldApiEndpointsTest(APITestCase):
     """
@@ -111,6 +111,122 @@ class ShieldApiEndpointsTest(APITestCase):
         self.assertEqual(resp2.status_code, status.HTTP_200_OK)
         self.assertEqual(resp2.data['user']['email'], 'google.user@shieldnet.app')
         self.assertIn('tokens', resp2.data)
+
+    def test_weak_password_registration_rejected(self):
+        # Durcissement sécurité (CWE-521) : rejet des mots de passe trop simples ou courants
+        register_url = reverse('auth-register')
+        reg_data = {
+            'email': 'weakpassword@shieldnet.app',
+            'password': '123',  # Mot de passe trivial
+            'name': 'Test Weak'
+        }
+        reg_resp = self.client.post(register_url, reg_data, format='json')
+        self.assertEqual(reg_resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_otp_workflow_and_brute_force_lockout(self):
+        # 1. Demande d'un code OTP sécurisé
+        send_url = reverse('auth-send-otp')
+        send_resp = self.client.post(send_url, {'email': 'citoyen.otp@shieldnet.app'}, format='json')
+        self.assertEqual(send_resp.status_code, status.HTTP_200_OK)
+
+        # 2. Tentatives erronées répétées pour tester le verrouillage anti-bruteforce (CWE-307)
+        verify_url = reverse('auth-verify-otp')
+        for i in range(2):
+            bad_resp = self.client.post(verify_url, {
+                'email': 'citoyen.otp@shieldnet.app',
+                'code': '000000'
+            }, format='json')
+            self.assertEqual(bad_resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # La 3e tentative erronée doit déclencher un blocage 429 Too Many Requests (révocation du code)
+        lockout_resp = self.client.post(verify_url, {
+            'email': 'citoyen.otp@shieldnet.app',
+            'code': '000000'
+        }, format='json')
+        self.assertEqual(lockout_resp.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+
+    def test_admin_password_reset_via_otp_forbidden(self):
+        from django.contrib.auth.models import User
+        User.objects.create_superuser('admin_target', 'admin.target@shieldnet.app', 'AdminTargetPass123!')
+        send_url = reverse('auth-send-otp')
+        resp = self.client.post(send_url, {
+            'email': 'admin.target@shieldnet.app',
+            'purpose': 'reset_password'
+        }, format='json')
+        # Rejet strict 403 pour préserver les comptes administratifs (CWE-287)
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_authenticated_password_change_success(self):
+        from django.contrib.auth.models import User
+        user = User.objects.create_user(username='pwd_user@shieldnet.app', email='pwd_user@shieldnet.app', password='OldSecretPass123!')
+        auth_client = self.client_class()
+        auth_client.force_authenticate(user=user)
+
+        url = reverse('auth-password-change')
+        payload = {
+            'old_password': 'OldSecretPass123!',
+            'new_password': 'NewStrongPass456!',
+            'confirm_password': 'NewStrongPass456!',
+        }
+        resp = auth_client.post(url, payload, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertIn('tokens', resp.data)
+        self.assertIn('access', resp.data['tokens'])
+
+        # Vérifier que le mot de passe est bien mis à jour
+        user.refresh_from_db()
+        self.assertTrue(user.check_password('NewStrongPass456!'))
+        self.assertFalse(user.check_password('OldSecretPass123!'))
+
+        # Vérifier la journalisation AuditLog
+        self.assertTrue(
+            AuditLog.objects.filter(
+                user=user,
+                action=AuditLogAction.PASSWORD_CHANGE
+            ).exists()
+        )
+
+    def test_authenticated_password_change_wrong_old_password(self):
+        from django.contrib.auth.models import User
+        user = User.objects.create_user(username='pwd_wrong@shieldnet.app', email='pwd_wrong@shieldnet.app', password='OldSecretPass123!')
+        auth_client = self.client_class()
+        auth_client.force_authenticate(user=user)
+
+        url = reverse('auth-password-change')
+        payload = {
+            'old_password': 'IncorrectPassword!',
+            'new_password': 'NewStrongPass456!',
+            'confirm_password': 'NewStrongPass456!',
+        }
+        resp = auth_client.post(url, payload, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('old_password', resp.data)
+
+    def test_authenticated_password_change_identical_password_rejected(self):
+        from django.contrib.auth.models import User
+        user = User.objects.create_user(username='pwd_same@shieldnet.app', email='pwd_same@shieldnet.app', password='OldSecretPass123!')
+        auth_client = self.client_class()
+        auth_client.force_authenticate(user=user)
+
+        url = reverse('auth-password-change')
+        payload = {
+            'old_password': 'OldSecretPass123!',
+            'new_password': 'OldSecretPass123!',
+            'confirm_password': 'OldSecretPass123!',
+        }
+        resp = auth_client.post(url, payload, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('new_password', resp.data)
+
+    def test_authenticated_password_change_unauthenticated_forbidden(self):
+        url = reverse('auth-password-change')
+        client = self.client_class()
+        resp = client.post(url, {
+            'old_password': 'OldSecretPass123!',
+            'new_password': 'NewStrongPass456!',
+            'confirm_password': 'NewStrongPass456!',
+        }, format='json')
+        self.assertIn(resp.status_code, [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN])
 
     def test_admin_stats_and_moderation(self):
         from django.contrib.auth.models import User

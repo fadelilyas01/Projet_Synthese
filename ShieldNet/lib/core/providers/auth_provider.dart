@@ -81,6 +81,18 @@ class AuthNotifier extends StateNotifier<UserModel?> {
     state = user;
   }
 
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    await _authService.changePassword(
+      currentPassword: currentPassword,
+      newPassword: newPassword,
+      confirmPassword: confirmPassword,
+    );
+  }
+
   Future<void> logout() async {
     await _authService.logout();
     state = null;

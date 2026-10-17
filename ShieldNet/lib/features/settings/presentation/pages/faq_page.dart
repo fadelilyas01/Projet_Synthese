@@ -407,9 +407,11 @@ class _HelpFaqPageState extends State<HelpFaqPage> {
                         children: [
                           const Icon(Icons.mail_rounded, size: 18, color: AppTheme.primaryColor),
                           const SizedBox(width: 8),
-                          Text(
-                            isFr ? 'Courriel direct du support' : 'Direct Support Email',
-                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                          Expanded(
+                            child: Text(
+                              isFr ? 'Courriel direct du support' : 'Direct Support Email',
+                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                            ),
                           ),
                         ],
                       ),
@@ -560,9 +562,11 @@ class _HelpFaqPageState extends State<HelpFaqPage> {
                       child: const Icon(Icons.lock_rounded, color: AppTheme.primaryColor, size: 22),
                     ),
                     const SizedBox(width: 14),
-                    Text(
-                      isFr ? 'Politique de Confidentialité' : 'Privacy Policy',
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    Expanded(
+                      child: Text(
+                        isFr ? 'Politique de Confidentialité' : 'Privacy Policy',
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
                     ),
                   ],
                 ),
@@ -644,9 +648,11 @@ class _HelpFaqPageState extends State<HelpFaqPage> {
                       child: const Icon(Icons.description_rounded, color: AppTheme.primaryColor, size: 22),
                     ),
                     const SizedBox(width: 14),
-                    Text(
-                      isFr ? 'Conditions d\'Utilisation' : 'Terms of Service',
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    Expanded(
+                      child: Text(
+                        isFr ? 'Conditions d\'Utilisation' : 'Terms of Service',
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
                     ),
                   ],
                 ),

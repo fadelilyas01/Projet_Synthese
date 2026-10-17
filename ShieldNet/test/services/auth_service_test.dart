@@ -257,6 +257,80 @@ void main() {
     });
   });
 
+  group('AuthService — Modification du mot de passe (changePassword)', () {
+    test('changePassword réussi met à jour les tokens JWT', () async {
+      when(() => mockStorage.read(key: 'auth_access_token'))
+          .thenAnswer((_) async => 'old_jwt_token');
+      when(() => mockDio.post('auth/password/change/', data: any(named: 'data'), options: any(named: 'options')))
+          .thenAnswer((_) async => Response(
+                data: {
+                  'detail': 'Votre mot de passe a été modifié avec succès.',
+                  'tokens': {
+                    'access': 'new_jwt_access',
+                    'refresh': 'new_jwt_refresh',
+                  },
+                },
+                statusCode: 200,
+                requestOptions: RequestOptions(path: 'auth/password/change/'),
+              ));
+
+      await authService.changePassword(
+        currentPassword: 'OldPassword123!',
+        newPassword: 'NewPassword456!',
+        confirmPassword: 'NewPassword456!',
+      );
+
+      verify(() => mockStorage.write(key: 'auth_access_token', value: 'new_jwt_access')).called(1);
+      verify(() => mockStorage.write(key: 'auth_refresh_token', value: 'new_jwt_refresh')).called(1);
+    });
+
+    test('changePassword sans jeton lance une exception session expirée', () async {
+      when(() => mockStorage.read(key: 'auth_access_token'))
+          .thenAnswer((_) async => null);
+
+      expect(
+        () => authService.changePassword(
+          currentPassword: 'OldPassword123!',
+          newPassword: 'NewPassword456!',
+          confirmPassword: 'NewPassword456!',
+        ),
+        throwsA(isA<Exception>().having(
+          (e) => e.toString(),
+          'message',
+          contains('Session expirée'),
+        )),
+      );
+    });
+
+    test('changePassword rejeté par le serveur extrait l\'erreur métier', () async {
+      when(() => mockStorage.read(key: 'auth_access_token'))
+          .thenAnswer((_) async => 'valid_token');
+      when(() => mockDio.post('auth/password/change/', data: any(named: 'data'), options: any(named: 'options')))
+          .thenThrow(DioException(
+        type: DioExceptionType.badResponse,
+        requestOptions: RequestOptions(path: 'auth/password/change/'),
+        response: Response(
+          data: {'old_password': ['Le mot de passe actuel est incorrect.']},
+          statusCode: 400,
+          requestOptions: RequestOptions(path: 'auth/password/change/'),
+        ),
+      ));
+
+      expect(
+        () => authService.changePassword(
+          currentPassword: 'BadPassword!',
+          newPassword: 'NewPassword456!',
+          confirmPassword: 'NewPassword456!',
+        ),
+        throwsA(isA<Exception>().having(
+          (e) => e.toString(),
+          'message',
+          contains('Le mot de passe actuel est incorrect'),
+        )),
+      );
+    });
+  });
+
   group('UserModel', () {
     test('isAdmin retourne true quand is_staff ou is_superuser', () {
       final staff = UserModel(id: 1, email: 'a@b.com', name: 'A', isStaff: true, isSuperuser: false);

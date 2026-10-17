@@ -19,6 +19,10 @@ COPY . /app/
 
 RUN python manage.py collectstatic --noinput || true
 
+# Utilisateur non-privilégié pour la sécurité en production (CWE-250)
+RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
+USER appuser
+
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \

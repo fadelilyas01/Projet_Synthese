@@ -33,6 +33,8 @@ class _LegalCompliancePageState extends ConsumerState<LegalCompliancePage> {
         title: Text(
           isEn ? 'Compliance, Privacy & Ethics' : 'Conformité, Vie Privée & Éthique',
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+          overflow: TextOverflow.ellipsis,
+          maxLines: 1,
         ),
       ),
       body: ListView(

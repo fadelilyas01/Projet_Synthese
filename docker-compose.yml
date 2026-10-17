@@ -10,8 +10,9 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-shieldnet_db}
       POSTGRES_USER: ${POSTGRES_USER:-shieldnet_user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    # Durcissement réseau : liaison sur loopback 127.0.0.1 uniquement (fermé à l'Internet public)
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -27,8 +28,9 @@ services:
     image: redis:7-alpine
     container_name: shieldnet_redis
     restart: unless-stopped
+    # Durcissement réseau : loopback local uniquement
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
 
   # -------------------------------------------------------------
   # API REST Django (Gunicorn + DRF + Swagger)
@@ -47,7 +49,7 @@ services:
     env_file:
       - ./shieldnet_backend/.env
     environment:
-      DJANGO_DEBUG: "${DJANGO_DEBUG:-True}"
+      DJANGO_DEBUG: "${DJANGO_DEBUG:-False}"
       SECRET_KEY: "${SECRET_KEY}"
       API_KEY: "${API_KEY}"
       HASH_SALT: "${HASH_SALT}"
@@ -56,11 +58,11 @@ services:
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
       POSTGRES_HOST: "db"
       POSTGRES_PORT: "5432"
-      ALLOWED_HOSTS: "${ALLOWED_HOSTS:-*}"
+      ALLOWED_HOSTS: "${ALLOWED_HOSTS:-localhost,127.0.0.1,api.shieldnet.app,admin.shieldnet.app}"
       ADMIN_EMAIL: "${ADMIN_EMAIL:-admin@shieldnet.app}"
-      ADMIN_PASSWORD: "${ADMIN_PASSWORD}"
+    # Durcissement réseau : liaison sur loopback 127.0.0.1 (reverse proxy Nginx / ALB requis)
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     volumes:
       - ./shieldnet_backend:/app
 

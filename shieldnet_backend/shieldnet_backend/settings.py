@@ -55,6 +55,10 @@ if not HASH_SALT:
     else:
         raise ImproperlyConfigured("Variable d'environnement HASH_SALT obligatoire en production.")
 
+# SǸcuritǸ OAuth Google et Collecte des MǸtriques Prometheus (Pillars 1 & 8)
+GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID', '').strip()
+PROMETHEUS_METRICS_TOKEN = os.environ.get('PROMETHEUS_METRICS_TOKEN', '').strip()
+
 # 4. ALLOWED_HOSTS : Parsing de variable d'environnement & interdiction de '*' en production
 raw_hosts = os.environ.get('ALLOWED_HOSTS', '')
 if raw_hosts:
@@ -219,7 +223,7 @@ REST_FRAMEWORK = {
 }
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(days=7),
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=2),  # Durcissement sécurité : 2h au lieu de 7 jours (CWE-613)
     'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
     'ROTATE_REFRESH_TOKENS': True,
 }
@@ -229,6 +233,11 @@ SPECTACULAR_SETTINGS = {
     'DESCRIPTION': 'API REST Collaborative pour le filtrage anti-spam d\'appels et SMS',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
+    'SERVE_PERMISSIONS': (
+        ['rest_framework.permissions.AllowAny']
+        if (DEBUG or IS_TESTING)
+        else ['shield_api.permissions.IsAdminStaffUser']
+    ),
 }
 
 

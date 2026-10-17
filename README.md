@@ -31,11 +31,11 @@ Projet synthese/
 │   ├── android/              # Service natif d'interception (CallScreeningService) & Gradle 8.13+
 │   ├── lib/                  # Code source Flutter (Clean Architecture, Riverpod)
 │   ├── l10n/                 # Fichiers de localisation bilingues (français / anglais)
-│   └── test/                 # 67 tests automatisés (unitaires, services, observabilité et sécurité)
+│   └── test/                 # 71 tests automatisés (unitaires, services, radar québécois et sécurité)
 │
 ├── shieldnet_backend/        # Serveur d'API REST et console de modération (Django)
 │   ├── shield_api/           # API REST, modèles, moteur IA, modération, OTP et consensus
-│   │   └── tests/            # 78 tests automatisés du backend (API, consensus, RBAC et modération)
+│   │   └── tests/            # 93 tests automatisés du backend (API, consensus, RBAC, OAuth et sécurité)
 │   ├── shieldnet_backend/    # Configuration générale et routage Django
 │   └── templates/            # Gabarits HTML de la console d'administration SOC
 │
@@ -45,10 +45,11 @@ Projet synthese/
 │   ├── OPERATIONS_PRODUCTION_ET_MAINTENANCE.md # Guide des opérations, PRA, scalabilité et versioning
 │   └── SECURITY_AND_THREAT_MODEL.md
 │
-├── Jenkinsfile               # Pipeline d'intégration continue CI/CD (145 tests, linting, build APK)
+├── .github/workflows/ci.yml  # Pipeline GitHub Actions CI/CD (164 tests automatisés, linting, couverture)
+├── Jenkinsfile               # Pipeline Jenkins CI/CD alternatif
 ├── docker-compose.jenkins.yml# Déploiement local du serveur Jenkins LTS conteneurisé
 ├── start-dev.ps1             # Script de démarrage de l'environnement de développement
-└── test-all.ps1              # Script pour exécuter l'ensemble des 145 tests automatisés
+└── test-all.ps1              # Script PowerShell pour exécuter l'ensemble des 164 tests automatisés
 ```
 
 ---
@@ -117,27 +118,35 @@ flutter run
 
 ## 4. Tests automatisés et qualité du code
 
-Le projet comprend **145 tests automatisés (100% au vert)** validant le bon fonctionnement de l'ensemble de la solution :
+Le projet comprend **164 tests automatisés (100% au vert)** validant le bon fonctionnement de l'ensemble de la solution :
 
-- **78 tests côté backend (Django)** : couvrent l'API REST, l'authentification JWT, les codes OTP, le moteur IA d'arbitrage sémantique, les calculs de consensus citoyen, le filtrage régional, les métriques SOC, la modération et la résilience aux pannes.
-- **67 tests côté mobile (Flutter)** : valident le filtrage d'appels natif, l'IA heuristique prédictive (Neighbor Spoofing, Burst Dialing, entropie), le hachage HMAC-SHA256, la gestion de session (timeout 5 min avec reverrouillage biométrique), le filtre d'appels nocturne et strict, le stockage sécurisé et la synchronisation résiliente.
+- **93 tests côté backend (Django)** : couvrent l'API REST, l'authentification JWT, les codes OTP avec anti-bombardement (CWE-307), la protection anti-Confused Deputy OAuth Google (CWE-287), la mitigation des timing attacks (CWE-208), le masquage Loi 25, le moteur IA d'arbitrage sémantique, les calculs de consensus citoyen, le filtrage régional, les métriques SOC, la modération et la résilience aux pannes.
+- **71 tests côté mobile (Flutter)** : valident le filtrage d'appels natif, l'IA heuristique prédictive (Neighbor Spoofing, Burst Dialing, entropie), le hachage HMAC-SHA256, la gestion de session (timeout 5 min avec reverrouillage biométrique), le filtre d'appels nocturne et strict, le stockage sécurisé et la synchronisation résiliente.
 
-Pour exécuter la suite complète des 145 tests d'un seul coup :
+Pour exécuter la suite complète des 164 tests d'un seul coup :
 ```powershell
 .\test-all.ps1
 ```
 
 ---
 
-## 5. Pipeline d'Intégration Continue (CI/CD) avec Jenkins
+## 5. Pipelines d'Intégration Continue (CI/CD)
 
-La qualité et l'intégrité du code sont automatisées à chaque validation via le fichier [`Jenkinsfile`](file:///C:/Projet/Projet%20synthese/Jenkinsfile).
+La qualité et l'intégrité du code sont automatisées à chaque validation via deux solutions prêtes à l'emploi :
 
-### Étapes du pipeline Jenkins (145 tests validés) :
+### A. Pipeline Cloud GitHub Actions ([`.github/workflows/ci.yml`](file:///C:/Projet/Projet%20synthese/.github/workflows/ci.yml))
+Exécuté automatiquement à chaque `push` ou `pull request` sur GitHub :
+- Configuration automatique des environnements Python 3.12 et Flutter stable.
+- Vérification stricte des migrations Django (`makemigrations --check --dry-run`).
+- Exécution de l'analyse statique Flutter (`flutter analyze` — 0 avertissement).
+- Exécution de l'intégralité des **164 tests automatisés** avec rapport de couverture.
+
+### B. Pipeline Local / On-Premise Jenkins ([`Jenkinsfile`](file:///C:/Projet/Projet%20synthese/Jenkinsfile))
+Pour les infrastructures privées ou démonstrations locales :
 1. **Environnement & Outils** : Détection des exécutables et versions (`python`, `flutter`, `git`).
-2. **Backend — Validation & Tests (Django)** : Installation des dépendances, vérification stricte des migrations (`makemigrations --check --dry-run`) et exécution des **78 tests unitaires** (`python manage.py test shield_api`).
-3. **Mobile — Analyse Statique (Flutter Linter)** : Analyse rigoureuse du code Dart avec `flutter analyze` (**0 avertissement bloquant toléré**).
-4. **Mobile — Tests Unitaires & Widgets (Flutter)** : Exécution des **67 tests automatisés** avec `flutter test`.
+2. **Backend — Validation & Tests (Django)** : Installation des dépendances, vérification stricte des migrations et exécution des tests backend.
+3. **Mobile — Analyse Statique (Flutter Linter)** : Analyse rigoureuse du code Dart avec `flutter analyze` (**0 avertissement toléré**).
+4. **Mobile — Tests Unitaires & Widgets (Flutter)** : Exécution de l'ensemble des tests mobiles.
 5. **Mobile — Compilation de l'APK Android** : Génération automatisée du paquet d'application avec `flutter build apk --debug`.
 6. **Archivage des Artefacts** : Conservation et mise à disposition directe du binaire APK compilé (`app-debug.apk`) dans Jenkins.
 
@@ -153,4 +162,4 @@ docker exec shieldnet_jenkins cat /var/jenkins_home/secrets/initialAdminPassword
 ```
 
 L'interface web est accessible à l'adresse : **[http://localhost:8080](http://localhost:8080)**.
-Le pipeline exécute automatiquement les 145 tests et archive l'APK téléchargeable à chaque commit.
+Le pipeline exécute automatiquement les 164 tests et archive l'APK téléchargeable à chaque commit.

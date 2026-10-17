@@ -25,7 +25,8 @@ def validate_secure_email(email_str):
 
 import re
 from rest_framework import serializers
-from .models import BlacklistedNumber, SpamReport, SafeReport, SafeReasonChoices, AuditLog
+from .services import mask_email
+from .models import BlacklistedNumber, SpamReport, SafeReport, SafeReasonChoices, AuditLog, AuditLogAction
 
 class BlacklistedNumberSerializer(serializers.ModelSerializer):
     """
@@ -83,7 +84,9 @@ class SafeReportSerializer(serializers.ModelSerializer):
         fields = ['id', 'phone_hash', 'reason', 'comment', 'reporter_email', 'created_at']
 
     def get_reporter_email(self, obj):
-        return obj.reporter.email if obj.reporter else 'Anonyme'
+        if not obj.reporter or not obj.reporter.email:
+            return 'Anonyme'
+        return mask_email(obj.reporter.email)
 
 class CheckNumberResponseSerializer(serializers.Serializer):
     is_spam = serializers.BooleanField()
@@ -185,6 +188,15 @@ class UserRegisterSerializer(serializers.Serializer):
             raise serializers.ValidationError("Cet email est déjà associé à un compte.")
         return email_clean
 
+    def validate_password(self, value):
+        from django.contrib.auth.password_validation import validate_password
+        from django.core.exceptions import ValidationError as DjangoValidationError
+        try:
+            validate_password(value)
+        except DjangoValidationError as e:
+            raise serializers.ValidationError(list(e.messages))
+        return value
+
     def create(self, validated_data):
         email = validated_data['email']
         password = validated_data['password']
@@ -212,18 +224,44 @@ class EmailLoginSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True)
 
     def validate(self, data):
+        from django.core.cache import cache
         email = data.get('email', '').strip().lower()
         password = data.get('password')
+
+        lockout_key = f'login_lockout_{email}'
+        if cache.get(lockout_key):
+            raise serializers.ValidationError("Compte temporairement verrouillé suite à de multiples tentatives erronées. Veuillez patienter 15 minutes.")
 
         user = User.objects.filter(email__iexact=email).first()
         if not user:
             user = User.objects.filter(username__iexact=email).first()
 
-        if not user or not user.check_password(password):
+        # Atténuation des attaques par canal auxiliaire (CWE-208 / Timing Attack)
+        if not user:
+            User().check_password(password)
+            raise serializers.ValidationError("Adresse email ou mot de passe incorrect.")
+
+        if not user.check_password(password):
+            attempts_key = f'login_attempts_{email}'
+            attempts = cache.get(attempts_key, 0) + 1
+            cache.set(attempts_key, attempts, timeout=900)
+            if attempts >= 5:
+                cache.set(lockout_key, True, timeout=900)
+                cache.delete(attempts_key)
+                AuditLog.objects.create(
+                    user=user,
+                    action=AuditLogAction.APPROVE_BLOCK,
+                    details=f"Verrouillage de sécurité déclenché pour le compte {email} (5 tentatives erronées)",
+                    source='SECURITY_DEFENSE'
+                )
+                raise serializers.ValidationError("Compte temporairement verrouillé suite à 5 tentatives erronées. Veuillez patienter 15 minutes.")
             raise serializers.ValidationError("Adresse email ou mot de passe incorrect.")
 
         if not user.is_active:
             raise serializers.ValidationError("Ce compte utilisateur est inactif.")
+
+        cache.delete(f'login_attempts_{email}')
+        cache.delete(lockout_key)
 
         data['user'] = user
         return data
@@ -241,6 +279,45 @@ class GoogleLoginSerializer(serializers.Serializer):
 class UpdateUserRegionSerializer(serializers.Serializer):
     country = serializers.ChoiceField(choices=CountryChoices.choices, required=False)
     province_or_state = serializers.CharField(max_length=50, required=False)
+
+
+class PasswordChangeSerializer(serializers.Serializer):
+    """
+    Sérialiseur de changement de mot de passe pour utilisateur authentifié.
+    Valide l'ancien mot de passe, l'entropie du nouveau mot de passe et l'égalité avec la confirmation.
+    """
+    old_password = serializers.CharField(write_only=True, required=True)
+    new_password = serializers.CharField(write_only=True, required=True, min_length=8)
+    confirm_password = serializers.CharField(write_only=True, required=True, min_length=8)
+
+    def validate_old_password(self, value):
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+        if not user or not user.check_password(value):
+            raise serializers.ValidationError("Le mot de passe actuel est incorrect.")
+        return value
+
+    def validate(self, data):
+        old_password = data.get('old_password')
+        new_password = data.get('new_password')
+        confirm_password = data.get('confirm_password')
+
+        if new_password != confirm_password:
+            raise serializers.ValidationError({"confirm_password": "La confirmation ne correspond pas au nouveau mot de passe."})
+
+        if old_password and new_password and old_password == new_password:
+            raise serializers.ValidationError({"new_password": "Le nouveau mot de passe doit être différent du mot de passe actuel."})
+
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+        from django.contrib.auth.password_validation import validate_password
+        from django.core.exceptions import ValidationError as DjangoValidationError
+        try:
+            validate_password(new_password, user)
+        except DjangoValidationError as e:
+            raise serializers.ValidationError({"new_password": list(e.messages)})
+
+        return data
 
 
 

@@ -12,6 +12,7 @@ import '../../../../core/services/regional_compliance_service.dart';
 import '../widgets/region_selection_sheet.dart';
 import 'faq_page.dart';
 import '../../../../core/widgets/app_logo.dart';
+import '../../../../core/widgets/change_password_sheet.dart';
 import '../../../../core/services/biometric_service.dart';
 import 'legal_compliance_page.dart';
 import 'security_settings_page.dart';
@@ -28,7 +29,21 @@ class SettingsPage extends ConsumerStatefulWidget {
 
 class _SettingsPageState extends ConsumerState<SettingsPage> {
   bool _isSyncing = false;
+  bool _biometricEnabled = false;
   final BiometricService _biometricService = BiometricService();
+
+  @override
+  void initState() {
+    super.initState();
+    _checkBiometrics();
+  }
+
+  Future<void> _checkBiometrics() async {
+    final enabled = await _biometricService.isBiometricEnabled();
+    if (mounted) {
+      setState(() => _biometricEnabled = enabled);
+    }
+  }
 
   Future<void> _flushOfflineQueue() async {
     setState(() => _isSyncing = true);
@@ -131,9 +146,13 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         children: [
           // 1. Profil utilisateur et état d'authentification
           _buildUserAccountCard(user, cardBg, borderColor, isDark, l10n),
+          const SizedBox(height: 14),
+
+          // 2. Posture de Sécurité & Télémétrie d'Ingénierie
+          _buildSecurityPostureBanner(isDark, borderColor, isEn, user),
           const SizedBox(height: 18),
 
-          // 2. Hub Principal : Sécurité & Filtrage
+          // 3. Hub Principal : Sécurité & Filtrage
           _buildSectionHeader(l10n?.sectionSecurity ?? (isEn ? 'SECURITY' : 'SÉCURITÉ')),
           _buildCard(
             cardBg: cardBg,
@@ -564,6 +583,45 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               child: Text(l10n?.btnLogout ?? 'Déconnexion', style: const TextStyle(color: AppTheme.accentRed, fontSize: 12, fontWeight: FontWeight.bold)),
             ),
           ),
+          const Divider(height: 1, indent: 16, endIndent: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => ChangePasswordSheet.show(context),
+                    icon: const Icon(Icons.key_rounded, size: 16),
+                    label: Text(
+                      ref.watch(localeProvider).languageCode == 'en' ? 'Password' : 'Mot de passe',
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                      side: BorderSide(color: borderColor),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => RegionSelectionSheet.show(context),
+                    icon: const Icon(Icons.public_rounded, size: 16),
+                    label: Text(
+                      '${user.countryFlag} ${user.provinceOrState}',
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                      side: BorderSide(color: borderColor),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       );
     }
@@ -594,6 +652,172 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           onTap: () => AuthBottomSheet.show(context),
         ),
       ],
+    );
+  }
+
+  Widget _buildSecurityPostureBanner(bool isDark, Color borderColor, bool isEn, UserModel? user) {
+    final appSettings = ref.watch(appSettingsProvider);
+    final contactsOnly = ref.watch(contactsOnlyProvider);
+
+    int score = 60;
+    if (appSettings.autoBlock) score += 15;
+    if (appSettings.smsAnalysis) score += 10;
+    if (_biometricEnabled) score += 10;
+    if (contactsOnly) score += 5;
+    if (score > 100) score = 100;
+
+    final Color statusColor;
+    final String statusTitle;
+    final String statusSubtitle;
+
+    if (score >= 95) {
+      statusColor = AppTheme.accentGreen;
+      statusTitle = isEn ? 'OPTIMAL SHIELD POSTURE' : 'POSTURE BOUCLIER OPTIMALE';
+      statusSubtitle = isEn
+          ? 'Autonomous on-device engine with zero telecom data leakage'
+          : 'Moteur local autonome avec neutralisation temps réel sans fuite de données';
+    } else if (score >= 80) {
+      statusColor = AppTheme.primaryLightColor;
+      statusTitle = isEn ? 'HIGH PROTECTION ACTIVE' : 'PROTECTION ÉLEVÉE ACTIVE';
+      statusSubtitle = isEn
+          ? 'Call & SMS filtering armed. Enable biometrics for optimal defense'
+          : 'Filtrage actif. Activez la biométrie pour atteindre le niveau optimal';
+    } else {
+      statusColor = AppTheme.accentOrange;
+      statusTitle = isEn ? 'STANDARD DEFENSE' : 'DÉFENSE STANDARD';
+      statusSubtitle = isEn
+          ? 'Some protection modules are paused or inactive'
+          : 'Certains modules de filtrage préventif sont désactivés';
+    }
+
+    final bgGradient = isDark
+        ? const LinearGradient(
+            colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          )
+        : const LinearGradient(
+            colors: [Color(0xFFF1F5F9), Color(0xFFFFFFFF)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          );
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: bgGradient,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: statusColor.withValues(alpha: 0.35), width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: statusColor.withValues(alpha: isDark ? 0.08 : 0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.verified_rounded, color: statusColor, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      statusTitle,
+                      style: TextStyle(
+                        color: statusColor,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.9,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '$score% ${isEn ? 'Protected' : 'Protégé'}',
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(
+                width: 44,
+                height: 44,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    CircularProgressIndicator(
+                      value: score / 100.0,
+                      strokeWidth: 4,
+                      backgroundColor: Colors.grey.withValues(alpha: 0.2),
+                      valueColor: AlwaysStoppedAnimation<Color>(statusColor),
+                    ),
+                    Center(
+                      child: Text(
+                        '$score%',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: statusColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            statusSubtitle,
+            style: const TextStyle(fontSize: 12, color: Colors.grey, height: 1.35),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              _buildEngineeringBadge('Filtre Bloom < 2ms', Icons.bolt_rounded, AppTheme.accentGreen),
+              _buildEngineeringBadge('Keystore AES-256', Icons.lock_outline_rounded, AppTheme.primaryLightColor),
+              _buildEngineeringBadge('Zéro-Fuite SHA-256', Icons.visibility_off_outlined, AppTheme.accentCyan),
+              _buildEngineeringBadge('Loi 25 & PIPEDA', Icons.gavel_rounded, AppTheme.accentOrange),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEngineeringBadge(String label, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withValues(alpha: 0.25), width: 0.8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: color),
+          ),
+        ],
+      ),
     );
   }
 

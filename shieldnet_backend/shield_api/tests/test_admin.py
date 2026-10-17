@@ -872,6 +872,9 @@ class ApplicationSecurityAuditTests(APITestCase):
         self.assertEqual(resp_too_many.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_prometheus_metrics_endpoint(self):
+        from django.contrib.auth.models import User
+        staff_user, _ = User.objects.get_or_create(username='metrics_staff', defaults={'is_staff': True})
+        self.client.force_authenticate(user=staff_user)
         url = reverse('prometheus-metrics')
         resp = self.client.get(url)
         self.assertEqual(resp.status_code, status.HTTP_200_OK)

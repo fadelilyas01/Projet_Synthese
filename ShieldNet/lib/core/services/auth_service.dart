@@ -301,6 +301,75 @@ class AuthService {
     }
   }
 
+  /// Modifie le mot de passe d'un utilisateur authentifié (Norme NIST SP 800-63B).
+  /// Valide l'ancien mot de passe et stocke les nouveaux jetons JWT générés.
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    final token = await getAccessToken();
+    if (token == null || token.isEmpty) {
+      throw Exception("Session expirée. Veuillez vous reconnecter.");
+    }
+
+    try {
+      final response = await _dio.post(
+        'auth/password/change/',
+        data: {
+          'old_password': currentPassword,
+          'new_password': newPassword,
+          'confirm_password': confirmPassword,
+        },
+        options: Options(
+          headers: {'Authorization': 'Bearer $token'},
+        ),
+      );
+
+      if (response.statusCode == 200 && response.data != null) {
+        final data = response.data as Map<String, dynamic>;
+        final tokens = data['tokens'] as Map<String, dynamic>?;
+        if (tokens != null) {
+          if (tokens['access'] != null) {
+            await _storage.write(key: _kAccessToken, value: tokens['access'] as String);
+          }
+          if (tokens['refresh'] != null) {
+            await _storage.write(key: _kRefreshToken, value: tokens['refresh'] as String);
+          }
+        }
+        return;
+      }
+      throw Exception("Impossible de mettre à jour le mot de passe.");
+    } on DioException catch (e) {
+      if (e.type == DioExceptionType.connectionError || e.type == DioExceptionType.connectionTimeout) {
+        throw Exception("Impossible de contacter le serveur ShieldNet.");
+      }
+      final data = e.response?.data;
+      if (data is Map<String, dynamic>) {
+        if (data.containsKey('old_password')) {
+          final err = data['old_password'];
+          throw Exception(err is List ? err.first.toString() : err.toString());
+        }
+        if (data.containsKey('new_password')) {
+          final err = data['new_password'];
+          throw Exception(err is List ? err.first.toString() : err.toString());
+        }
+        if (data.containsKey('confirm_password')) {
+          final err = data['confirm_password'];
+          throw Exception(err is List ? err.first.toString() : err.toString());
+        }
+        if (data.containsKey('detail')) {
+          throw Exception(data['detail'].toString());
+        }
+        if (data.containsKey('non_field_errors')) {
+          final nfe = data['non_field_errors'];
+          throw Exception(nfe is List ? nfe.join('\n') : nfe.toString());
+        }
+      }
+      throw Exception("Erreur lors de la modification du mot de passe.");
+    }
+  }
+
   /// Déconnexion
   Future<void> logout() async {
     await _storage.delete(key: _kAccessToken);

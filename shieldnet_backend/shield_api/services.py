@@ -25,6 +25,46 @@ def mask_phone_number(phone_number: str) -> str:
         return '***'
     return f"{cleaned[:5]} *** **{cleaned[-2:]}"
 
+
+def mask_email(email: str) -> str:
+    """
+    Masque une adresse courriel pour preserver la vie privee et respecter la Loi 25.
+    Exemple: 'citoyen.montreal@gmail.com' -> 'c***l@gmail.com'
+    Robuste contre toutes entrees malformees, partielles ou non-chaines.
+    """
+    if not email or not isinstance(email, str) or '@' not in email:
+        return 'Anonyme'
+    clean = email.strip()
+    if '@' not in clean:
+        return 'Anonyme'
+    parts = clean.split('@', 1)
+    local_part, domain = parts[0].strip(), parts[1].strip()
+    if not local_part or not domain:
+        return 'Anonyme'
+    if len(local_part) <= 2:
+        masked_local = f"{local_part[0]}***"
+    else:
+        masked_local = f"{local_part[0]}***{local_part[-1]}"
+    return f"{masked_local}@{domain}"
+
+
+def get_canonical_email(email: str) -> str:
+    """
+    Normalise l'adresse courriel pour contrer l'evasion du rate-limiting (CWE-307)
+    par sous-adressage (+tag) et insertion de points specifiques a Gmail/Google Workspace.
+    Exemple: 'a.l.i.c.e+spam@gmail.com' -> 'alice@gmail.com'
+    """
+    clean = str(email or '').strip().lower()
+    if '@' not in clean:
+        return clean
+    parts = clean.split('@', 1)
+    local_part, domain = parts[0].strip(), parts[1].strip()
+    if domain in ('gmail.com', 'googlemail.com'):
+        local_part = local_part.split('+')[0].replace('.', '')
+    else:
+        local_part = local_part.split('+')[0]
+    return f"{local_part}@{domain}"
+
 class DatabaseSanitizerService:
     """
     Nettoyage et maintenance de la base de données.

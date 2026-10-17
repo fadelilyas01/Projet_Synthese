@@ -2,7 +2,7 @@
 # ShieldNet - Script d'Execution & de Validation Globale des Tests
 # =====================================================================
 Write-Host "==========================================================" -ForegroundColor Cyan
-Write-Host "  SHIELDNET - VALIDATION GLOBALE DES TESTS (145 TESTS)    " -ForegroundColor Cyan
+Write-Host "  SHIELDNET - VALIDATION GLOBALE DES TESTS (169 TESTS)    " -ForegroundColor Cyan
 Write-Host "==========================================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -10,13 +10,13 @@ $rootPath = $PSScriptRoot
 $backendPath = Join-Path $rootPath "shieldnet_backend"
 $mobilePath = Join-Path $rootPath "ShieldNet"
 
-# 1. Tests Backend Django (78 tests)
+# 1. Tests Backend Django (98 tests)
 Write-Host "[1/3] Execution des tests Django REST API..." -ForegroundColor Yellow
 $backendProcess = Start-Process python -ArgumentList "manage.py test" -WorkingDirectory $backendPath -NoNewWindow -Wait -PassThru
 $backendExit = $backendProcess.ExitCode
 
 if ($backendExit -eq 0) {
-    Write-Host "  -> Backend Django : SUCCES (78 tests reussis)" -ForegroundColor Green
+    Write-Host "  -> Backend Django : SUCCES (98 tests reussis)" -ForegroundColor Green
 } else {
     Write-Host "  -> Backend Django : ECHEC" -ForegroundColor Red
 }
@@ -34,13 +34,13 @@ if ($analyzeExit -eq 0) {
 }
 Write-Host ""
 
-# 3. Tests Unitaires & Securite Flutter (67 tests)
-Write-Host "[3/3] Execution des tests Flutter (67 tests)..." -ForegroundColor Yellow
+# 3. Tests Unitaires & Securite Flutter (71 tests)
+Write-Host "[3/3] Execution des tests Flutter (71 tests)..." -ForegroundColor Yellow
 $flutterTestProcess = Start-Process flutter -ArgumentList "test" -WorkingDirectory $mobilePath -NoNewWindow -Wait -PassThru
 $flutterTestExit = $flutterTestProcess.ExitCode
 
 if ($flutterTestExit -eq 0) {
-    Write-Host "  -> Tests Flutter : SUCCES (67/67 tests reussis)" -ForegroundColor Green
+    Write-Host "  -> Tests Flutter : SUCCES (71/71 tests reussis)" -ForegroundColor Green
 } else {
     Write-Host "  -> Tests Flutter : ECHEC" -ForegroundColor Red
 }
@@ -49,7 +49,7 @@ Write-Host ""
 # Bilan
 Write-Host "==========================================================" -ForegroundColor Cyan
 if ($backendExit -eq 0 -and $analyzeExit -eq 0 -and $flutterTestExit -eq 0) {
-    Write-Host "  BILAN : TOUS LES 145 TESTS SONT AU VERT ! PROJET CONFORME." -ForegroundColor Green
+    Write-Host "  BILAN : TOUS LES 169 TESTS SONT AU VERT ! PROJET CONFORME." -ForegroundColor Green
 } else {
     Write-Host "  BILAN : CERTAINS TESTS ONT ECHOUE. VERIFIER LES LOGS." -ForegroundColor Red
 }

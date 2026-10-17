@@ -175,6 +175,7 @@ class AuditLogAction(models.TextChoices):
     DELETE_NUMBER = 'DELETE_NUMBER', 'Suppression de la Liste Noire'
     DELETE_REPORT = 'DELETE_REPORT', 'Suppression de Signalement'
     PURGE_DATABASE = 'PURGE_DATABASE', 'Purge de la Base'
+    PASSWORD_CHANGE = 'PASSWORD_CHANGE', 'Changement de Mot de Passe'
 
 class AuditLog(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
